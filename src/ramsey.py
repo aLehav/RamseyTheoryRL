@@ -52,5 +52,4 @@ assert ramseySat(G7, 3, 3) == False
 assert ramseySat(G7, 4, 4) == False
 assert ramseySat(G7, 5, 5) == False
 
-
 print("All tests passed!")

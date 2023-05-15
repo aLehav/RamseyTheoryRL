@@ -1,44 +1,57 @@
 import networkx as nx
+from ramseySat import ramseySat
+from typing import List, Tuple, Dict
+from tensorflow import keras
+from tensorflow.keras import layers
 
-def W_clique(clique_len):
+def heuristic(G: nx.Graph, k: int, l: int) -> int:
     """
-    Computes the reward for a clique of size clique_len.
+    Computes the reward of state G achieved by graph G as the value of a call to ramseySat.
+    A positive value indicates a case that disproves R(k,l) = n.
     """
-    return -clique_len**2
+    return int(not ramseySat(G, k, l))
 
-def W_K(K_len):
+def add_edge(G: nx.Graph, edge: tuple, k: int, l: int) -> int:
     """
-    Computes the reward for a complete subgraph of size K_len.
+    Consider add_edge to G to be an estimator for Q(s,a) with state of G being the degree
+    sequence and a to be adding the edge.
     """
-    return -K_len
-
-def heuristic(G, W_clique=W_clique, W_K=W_K):
-    """
-    Computes the reward of state G achieved by graph G to be W_clique(len(clique_i)) for all cliques and W_K(len(clique_k)) for all cliques W_K.
-    """
-    # Find all cliques in G
-    cliques = list(nx.find_cliques(G))
-
-    # Check for independent sets by creating the complement graph
-    complement = nx.complement(G)
-    Ks = list(nx.find_cliques(complement))
-
-    # TODO pos or negative reward?
-    # Compute the reward of state G
-    reward = sum([W_clique(-len(c)) for c in cliques])
-    reward += sum([W_K(-len(k)) for k in Ks if len(k) == 2])
-
-    return reward
-
-def action(G, c_size):
-    # Find all cliques of size c_size in G
-    cliques = [c for c in nx.find_cliques(G) if len(c) == c_size]
+    if not G.has_edge(*edge):  # Check if the edge already exists
+        G.add_edge(*edge)  # Add the edge if it doesn't already exist
     
-    if len(cliques) == 0:
-        raise ValueError(f"No clique of size {c_size} exists in the graph.")
+    return heuristic(G, k, l)
 
-    # Remove an edge from the graph
-    edge = cliques[0][:2]
-    G.remove_edge(*edge)
-    
-    return edge
+def G_to_rl_input(G: nx.Graph) -> Tuple[List[float], Dict[int, int]]:
+    """
+    Returns the degree sequence of the graph G sorted in decreasing order and scaled by a factor of n-1.
+    """
+    degrees = ((v, d) for v, d in G.degree())
+    degrees = sorted(degrees, key=lambda x: x[1], reverse=True)
+    max_degree = len(degrees) - 1
+    degree_vals = [deg[1]/max_degree for deg in degrees]
+    degree_locs = [deg[0] for deg in degrees]
+    return degree_vals, degree_locs
+
+
+G = nx.cycle_graph(4)
+G.add_edge(*(1,3))
+
+print(G_to_rl_input(G))
+
+def init_model() -> keras.models.Model:
+    input_size = 200  # Size of the input sequence
+
+    # Define the LSTM model
+    model = keras.Sequential()
+    model.add(layers.LSTM(32, input_shape=(input_size, 1)))  # 64 is the number of LSTM units
+    model.add(layers.Dense(input_size, activation='sigmoid'))  # Output layer with the same length as input
+
+    # Compile the model
+    model.compile(loss='mse', optimizer='adam')
+
+    # Print the model summary
+    model.summary()
+
+    return model
+
+init_model()
