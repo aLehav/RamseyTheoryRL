@@ -34,9 +34,11 @@ def main():
   # remove_outputs('../data/r34')
   # remove_outputs('../data/r35')
   # remove_outputs('../data/r36')
-  visualize_data(3,4,8)
-  visualize_data(3,5,13)
-  visualize_data(3,6,17)
+  # visualize_data(3,4,8)
+  # visualize_data(3,5,13)
+  # visualize_data(3,6,17)
+  # visualize_data(4,6,35)
+  pass
 
 if __name__ == '__main__':
   main()

@@ -1,5 +1,5 @@
 import networkx as nx
-from ramseySat import ramseySat
+from utils.ramseySat import ramseySat
 
 # Test symmetric cases
 G1 = nx.complete_graph(5)

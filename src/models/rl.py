@@ -1,5 +1,5 @@
 import networkx as nx
-from ramseySat import ramseySat
+from utils.ramseySat import ramseySat
 from typing import List, Tuple, Dict
 from tensorflow import keras
 from tensorflow.keras import layers
