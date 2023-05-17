@@ -52,6 +52,7 @@ def num_bipartite_subgraphs(G, m, n):
 # Count number of occurences of features in table 2 of paper for every 4 subgraph
 
 
+# O(n^4)
 def count_subgraph_structures(G):
     # Define the structures to look for
     structures = {
@@ -176,3 +177,5 @@ def remove_K4(G):
         G.remove_edge(u, v)
     else:
         print("Couldn't remove a K4 subgraph.")
+
+# Add functions to count subgraph structures added/removed when adding/removing an edge

@@ -21,13 +21,10 @@ def obtain_counts():
     feature_counts = dict()
     counters = count_subgraph_structures(g)
     print(counters)
-    G = graphs[0]
-    feature_counts = dict()
-    counters = count_subgraph_structures(G)
-    print(counters)
     # Output to file
     with open('feature_counts.txt', 'a') as convert_file:
-      convert_file.write(json.dumps(feature_counts))
+      convert_file.write(json.dumps(counters))
+      convert_file.write('\n')
   print(f"Time elapsed: {timeit.default_timer()-start_time} seconds")
 
 
