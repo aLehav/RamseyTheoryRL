@@ -4,6 +4,7 @@ import json
 import sys
 sys.path.append("..")
 from utils.features import *
+import timeit
 
 
 # Obtain feature table for each of the 37 R(4,6,35) graphs
@@ -13,26 +14,22 @@ from utils.features import *
 # Right now we do it for graph 1
 
 def obtain_counts():
-  print("here")
+  start_time = timeit.default_timer()
   filename = '../../data/r46/r46_35some.g6'
   graphs = nx.read_graph6(filename)
-  G = graphs[0]
-  feature_counts = dict()
-  counters = count_subgraph_structures(G)
-  print(counters)
-  # features_counts['K_2'] = num_complete_subgraphs(G,2)
-  # features_counts['P_3'] =
-  # features_counts['K_{1,3}'] =
-  # features_counts['P_4'] = 
-  # features_counts['K_3'] = num_complete_subgraphs(G, 3)
-  # features_counts['K_3 + e'] = num_extended_complete_subgraphs(G,3)
-  # features_counts['C_4'] = num_cycle_subgraphs(4)
-  # features_counts['K_4 - e'] = num_almost_complete_subgraphs(G,4)
-  # features_counts['K_4'] = num_complete_subgraphs(G, 4)
+  for idx, g in enumerate(graphs):
+    feature_counts = dict()
+    counters = count_subgraph_structures(g)
+    print(counters)
+    G = graphs[0]
+    feature_counts = dict()
+    counters = count_subgraph_structures(G)
+    print(counters)
+    # Output to file
+    with open('feature_counts.txt', 'a') as convert_file:
+      convert_file.write(json.dumps(feature_counts))
+  print(f"Time elapsed: {timeit.default_timer()-start_time} seconds")
 
-  # Output to file
-  # with open('feature_counts.txt', 'w') as convert_file:
-  #    convert_file.write(json.dumps(feature_counts))
 
 
 def main():
