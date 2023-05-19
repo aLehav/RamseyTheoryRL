@@ -6,7 +6,7 @@ sys.path.append("..")
 from utils.useful import *
 
 
-# Generate an r(3,9) graph with no K_3 and no K_10
+# Generate an r(3,9) graph with no K_3 and no independent set of size 10
 
 def generate_graph(n):
     i = 0
