@@ -6,16 +6,33 @@ from tensorflow.keras import layers
 import neptune
 import os
 from neptune.integrations.tensorflow_keras import NeptuneCallback
+import glob
 
 
 # Retrieve the API token from the environment variable
 api_token = os.environ.get('NEPTUNE_API_TOKEN')
-print(api_token)
 
 run = neptune.init_run(
     project="alehav/RamseyRL",
     api_token=api_token
 )
+neptune_cbk = NeptuneCallback(run=run, base_namespace="training")
+
+# neptune_model = neptune.init_model(
+#     name="Heuristic estimator",
+#     key='HEUR',
+#     project="alehav/RamseyRL",
+#     api_token=api_token
+# )
+neptune_model = neptune.init_model(
+    with_id='RAM-HEUR',
+    project='alehav/RamseyRL',
+    api_token=api_token)
+model_version = neptune.init_model_version(
+    model='RAM-HEUR',
+    project='alehav/RamseyRL',
+    api_token=api_token)
+
 
 params = {'epochs': 10, 'batch_size':16, 'optimizer':'adam'}
 run['parameters'] = params
@@ -36,8 +53,6 @@ def split_test_train(csv_path):
     train_X, test_X, train_y, test_y = train_test_split(X, y, test_size=0.2, shuffle=True, random_state=42)
     return train_X, test_X, train_y, test_y
 
-neptune_cbk = NeptuneCallback(run=run, base_namespace="training")
-
 def train(model, train_X, train_y):
     model.fit(train_X, 
             train_y, 
@@ -56,5 +71,14 @@ train_X, test_X, train_y, test_y = split_test_train(csv_path)
 model = create_model()
 train(model, train_X, train_y)
 test(model, test_X, test_y)
+
+model.save("my_model")
+model_version["saved_model"].upload("my_model/saved_model.pb")
+
+for name in glob.glob("variables/*"):
+    model_version[name].upload(name)
+
+
 run.stop()
+neptune_model.stop()
 
