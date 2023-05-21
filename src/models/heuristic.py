@@ -11,7 +11,7 @@ import utils.heuristic.handle_neptune as hn
 
 PROJECT = "alehav/RamseyRL"
 MODEL_NAME = "RAM-HEUR"
-PARAMS = {'epochs': 50, 'batch_size':16, 'optimizer':'adam'}
+PARAMS = {'epochs': 10, 'batch_size':16, 'optimizer':'adam'}
 CSV_PATH = 'train_gen.csv'
 TRAIN = False
 TEST = True
@@ -41,6 +41,7 @@ if TEST:
                                 model_name=MODEL_NAME,
                                 model_id=MODEL_ID,
                                 run_id=RUN_ID)
+    neptune_objects += [run, model_version]
     model_version['saved_model'].download('my_model')
     with zipfile.ZipFile('my_model/saved_model.zip', 'r') as zip_ref:
         zip_ref.extractall('/')

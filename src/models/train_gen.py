@@ -41,8 +41,8 @@ def create_entries_for_n(n):
             # Check for independent sets and cliques
             for s in range(2, min(MAX_S + 1, n)):
                 for t in range(s, min(MAX_T + 1, n)):
-                    has_no_independent_set = not has_independent_set_of_size_k(G, t) if n >= t else True
-                    has_no_clique = not has_kn(G, s) if n >= s else True
+                    has_no_independent_set = not has_independent_set_of_size_k(G, t)
+                    has_no_clique = not has_kn(G, s)
                     is_counter = has_no_independent_set and has_no_clique
                     data.append({**subgraph_counts, 'n': n, 's': s, 't': t, 'counter': is_counter})
     else:
