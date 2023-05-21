@@ -1,3 +1,4 @@
 networkx==3.1
 matplotlib==3.7.1
 pynauty==2.8.6
+igraph==0.10.4
