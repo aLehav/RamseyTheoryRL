@@ -23,3 +23,7 @@ def has_kn(G, k):
         if is_complete(subgraph):
             return True
     return False
+
+
+def check_counterexample(G, s, t):
+  return not has_kn(G, s) and not has_independent_set_of_size_k(G,t)

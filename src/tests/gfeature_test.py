@@ -8,6 +8,7 @@ import multiprocessing
 
 # Timing tests
 def main():
+  totalStartTime = timeit.default_timer()
 
   # Useful Tests -------------------------------------------
   # Test for is_complete
@@ -86,7 +87,7 @@ def main():
   startTime = timeit.default_timer()
   count_subgraphs_from_edge_parallel(G9,3,4)
   print(f"Multi Threaded Time Elapsed {timeit.default_timer() - startTime}")
-
+  print(f"Total Time elapsed: {timeit.default_timer() - totalStartTime}")
 
 # def add_one(n):
 #   my_temp = list(range(100))

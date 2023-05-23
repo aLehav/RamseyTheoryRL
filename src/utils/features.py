@@ -76,8 +76,6 @@ def count_subgraphs_from_edge(G, u, v):
     for node1, node2 in itertools.combinations(nodes, 2):
         # process pair of nodes node1 and node2
         subgraph = nx.subgraph(G, [u, v, node1, node2])
-        print('-----------------------')
-        print(subgraph)
         # Compute the canonical hash of the subgraph
         hash = nx.weisfeiler_lehman_graph_hash(subgraph)
 
