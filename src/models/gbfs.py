@@ -22,10 +22,10 @@ def load_vectorizations(PAST_path):
     return PAST
 
 
-def process_edge(e, G, PAST, used_edges, subgraph_counts, s, t, g6path_to_write_to, gEdgePath_to_write_to, path, new_graphs):
+def process_edge(e, G, PAST, used_edges, subgraph_counts, s, t, g6path_to_write_to, gEdgePath_to_write_to, path):
     check = str(e[0]) + ',' + str(e[1])
-    if check not in used_edges.keys():
-      used_edges[check] = 1
+    if (check in used_edges.keys()):
+      return None
     # Obtain new vectorization
     G_prime = G.copy()
     update_feature_from_edge(G_prime, e[0], e[1], subgraph_counts)
@@ -46,29 +46,31 @@ def process_edge(e, G, PAST, used_edges, subgraph_counts, s, t, g6path_to_write_
                       's': s, 't': t, 'counter': is_counterexample}
     vectorization_string = str(vectorization)
     # Assume keys in PAST are strings
-    if vectorization_string not in PAST.keys():
+    if True or vectorization_string not in PAST.keys():
         heuristic_val = heuristic(G)
         PAST[vectorization_string] = heuristic_val
+        return (heuristic_val, e, G_prime)
         new_graphs.append((heuristic_val, e, G_prime))
 
 # We are assuming python atomic list operations are thread-safe
-
 def step_par(G, PAST, used_edges, edges, s, t, g6path_to_write_to, gEdgePath_to_write_to, subgraph_counts, path):
-    new_graphs = []
     new_edges = []
-
     process_edge_wrapper = partial(process_edge, G=G, PAST=PAST, used_edges=used_edges, subgraph_counts=subgraph_counts,
-                                   s=s, t=t, g6path_to_write_to=g6path_to_write_to, gEdgePath_to_write_to=gEdgePath_to_write_to, path=path, new_graphs=new_graphs)
+                                   s=s, t=t, g6path_to_write_to=g6path_to_write_to, gEdgePath_to_write_to=gEdgePath_to_write_to, path=path)
 
     with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
-        results = pool.map(process_edge_wrapper, edges)
+        new_graphs = pool.map(process_edge_wrapper, edges)
 
+    new_graphs = [x for x in new_graphs if x is not None]
     if not new_graphs:
         return None
-
+    
     new_graphs.sort(key=lambda x: x[0], reverse=True)  # sort by heuristic
     best_edge = (new_graphs[0][1][0], new_graphs[0][1][1])
-    path.append(*best_edge)
+    path.append(best_edge)
+    # print(f"BestM{best_edge}")
+    check = str(best_edge[0]) + ',' + str(best_edge[1])
+    used_edges[check] = 1
     return new_graphs[0][2]
 
 
@@ -78,13 +80,12 @@ def step(G, PAST, used_edges, edges, s, t, g6path_to_write_to, gEdgePath_to_writ
     for e in edges:
         check = str(e[0]) + ',' + str(e[1])
         if check not in used_edges.keys():
-            used_edges[check] = 1
             # Obtain new vectorization
             update_feature_from_edge(G, e[0], e[1], subgraph_counts)
 
             is_counterexample = check_counterexample(G, s, t)
             # output to file
-            if (is_counterexample):
+            if (is_counterexample and False):
                 with open(g6path_to_write_to, 'a') as file:
                     file.write(G.write(format='graph6'))
                 # Add last edge
@@ -111,8 +112,11 @@ def step(G, PAST, used_edges, edges, s, t, g6path_to_write_to, gEdgePath_to_writ
     new_graphs.sort(key=lambda x: x[0], reverse=True)  # sort by heuristic
     best_edge = (new_graphs[0][1][0], new_graphs[0][1][1])
     path.append(best_edge)
+    check = str(best_edge[0]) + ',' + str(best_edge[1])
+    used_edges[check] = 1
     # return graph with max heuristic
     G.add_edge(*best_edge)
+    # print(f"Best{best_edge}")
     return G
 
 # Assume we are only adding edges
@@ -133,21 +137,24 @@ def bfs(G, g6path_to_write_to, gEdgePath_to_write_to, PAST_path, s, t, PARALLEL)
 
     PAST = load_vectorizations(PAST_path)
     subgraph_counts = count_subgraph_structures(G)
+    iterations = 0
     while G is not None:
+        iterations += 1
         if (PARALLEL):
             G = step_par(G, PAST, used_edges, edges, s, t, g6path_to_write_to,
                          gEdgePath_to_write_to, subgraph_counts, path)
         else:
             G = step(G, PAST, used_edges, edges, s, t, g6path_to_write_to,
                      gEdgePath_to_write_to, subgraph_counts, path)
-
+    print("Total Iterations", iterations)
+    print(path)
     # TODO Output PAST to file
     # with open(PAST_path, 'wb') as f:
     #     pickle.dump(PAST, f)
 
 
 def main():
-    G = ig.Graph(35)
+    G = ig.Graph(25)
     g6path_to_write_to = "../../data/found_counters/r39_graph.g6"
     gEdgePath_to_write_to = "../../data/found_counters/r39_path.txt"
     PAST_path = "none"
@@ -158,7 +165,8 @@ def main():
     bfs(G, g6path_to_write_to, gEdgePath_to_write_to, PAST_path, s, t, PARALLEL)
     print(f"Single Threaded Time Elapsed: {timeit.default_timer() - startTime}")
     startTime = timeit.default_timer()
-    bfs(G, g6path_to_write_to, gEdgePath_to_write_to, PAST_path, s, t, True)
+    G2 = ig.Graph(25)
+    bfs(G2, g6path_to_write_to, gEdgePath_to_write_to, PAST_path, s, t, True)
     print(f"Multi Threaded Time Elapsed: {timeit.default_timer() - startTime}")
 
 
