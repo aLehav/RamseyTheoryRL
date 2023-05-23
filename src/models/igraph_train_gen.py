@@ -21,8 +21,8 @@ if MODE == "FOR_ALL_N":
                            df_path=DF_PATH)
     
 if MODE == "RAMSEY_SPECIFIC":
-    S = 3
-    T = 6
+    S = 4
+    T = 5
     PATH = f'data/ramsey_s_t_n/{S}_{T}'
     DF_NAME = f'ramsey_{S}_{T}'
     DF_PATH = f'data/csv/{DF_NAME}.csv'

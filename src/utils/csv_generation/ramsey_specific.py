@@ -19,7 +19,6 @@ def ramsey_entries_for_file(path, S, T, N):
         # Compute count_subgraph_structures
         G = ig.Graph.TupleList(G.edges(), directed=False)
         subgraph_counts = count_subgraph_structures(G)
-
         # Check for independent sets and cliques, not needed for known counterexamples
         # has_no_independent_set = not has_independent_set_of_size_k(G, T)
         # has_no_clique = not has_kn(G, S)
