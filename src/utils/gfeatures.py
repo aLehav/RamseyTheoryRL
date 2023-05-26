@@ -3,6 +3,11 @@ import itertools
 import concurrent.futures
 import os
 import multiprocessing
+import sys
+import os
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.append(parent_dir)
+from utils.guseful import *
 
 
 node_list = [nodes for nodes in itertools.combinations(range(35), 4)]
@@ -72,11 +77,15 @@ def count_subgraphs_from_edge(G, u, v):
 
 # Update feature from edge
 def update_feature_from_edge(G, u, v, counters):
-    count = count_subgraphs_from_edge(G, u, v)
-    G.add_edge(u, v)
-    ncount = count_subgraphs_from_edge(G, u, v)
+    old_count = count_subgraphs_from_edge(G, u, v)
+    # Change edge
+    change_edge(G, (u,v))
+    new_count = count_subgraphs_from_edge(G, u, v)
+    # Make and edit a copy of counters such that we can pass it to all children
+    new_counters = {}
     for name in counters:
-        counters[name] += (ncount[name] - count[name])
+        new_counters[name] = counters[name] + (new_count[name] - old_count[name])
+    return new_counters
 
 
 def process_subgraph(G, nodes, structures):

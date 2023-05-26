@@ -1,15 +1,17 @@
 import multiprocessing
 import igraph as ig
+import networkx as nx
 import copy as cp
 import random
 import timeit
 import pickle
 from functools import partial
 import sys
-sys.path.append("..")
+import os
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.append(parent_dir)
 from utils.gfeatures import *
 from utils.guseful import *
-
 
 def heuristic(G):
     return random.random()
@@ -27,35 +29,33 @@ def process_edge(e, G, PAST, used_edges, subgraph_counts, s, t, g6path_to_write_
     if (check in used_edges.keys()):
       return None
     # Obtain new vectorization
-    G_prime = G.copy()
-    update_feature_from_edge(G_prime, e[0], e[1], subgraph_counts)
-
+    # G_prime = G.copy()
+    new_subgraph_counts = update_feature_from_edge(G, e[0], e[1], subgraph_counts)
     is_counterexample = check_counterexample(G, s, t)
-    # output to file TODO remove False
-    if (is_counterexample and False):
-        with open(g6path_to_write_to, 'a') as file:
-            file.write(G.write(format='graph6'))
-        # Add last edge
-        temp_edges = cp.deepcopy(path)
-        temp_edges.append(e)
-        # Output edge path to file
-        with open(gEdgePath_to_write_to, 'a') as file:
-            file.write(' '.join(temp_edges))
 
-    vectorization = {**subgraph_counts, 'n': G.vcount(),
+    # output to file
+    if (is_counterexample):
+       write_counterexample(G=G, 
+                                     g6path_to_write_to=g6path_to_write_to,
+                                     gEdgePath_to_write_to=gEdgePath_to_write_to,
+                                     e=e,
+                                     path=path)
+    # Change back edited edge
+    change_edge(G, e)
+
+    vectorization = {**new_subgraph_counts, 'n': G.vcount(),
                       's': s, 't': t, 'counter': is_counterexample}
     vectorization_string = str(vectorization)
     # Assume keys in PAST are strings
-    if True or vectorization_string not in PAST.keys():
+    if vectorization_string not in PAST.keys():
         heuristic_val = heuristic(G)
-        PAST[vectorization_string] = heuristic_val
-        return (heuristic_val, e, G_prime)
+        return (heuristic_val, e, new_subgraph_counts, vectorization_string)
         new_graphs.append((heuristic_val, e, G_prime))
 
 # We are assuming python atomic list operations are thread-safe
 def step_par(G, PAST, used_edges, edges, s, t, g6path_to_write_to, gEdgePath_to_write_to, subgraph_counts, path):
     new_edges = []
-    process_edge_wrapper = partial(process_edge, G=G, PAST=PAST, used_edges=used_edges, subgraph_counts=subgraph_counts,
+    process_edge_wrapper = partial(process_edge, G=G.copy(), PAST=PAST, used_edges=used_edges, subgraph_counts=subgraph_counts,
                                    s=s, t=t, g6path_to_write_to=g6path_to_write_to, gEdgePath_to_write_to=gEdgePath_to_write_to, path=path)
 
     with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
@@ -66,47 +66,46 @@ def step_par(G, PAST, used_edges, edges, s, t, g6path_to_write_to, gEdgePath_to_
         return None
     
     new_graphs.sort(key=lambda x: x[0], reverse=True)  # sort by heuristic
-    best_edge = (new_graphs[0][1][0], new_graphs[0][1][1])
+    best_edge = (new_graphs[0][1][0], new_graphs[0][1][1]) # best edge
     path.append(best_edge)
-    # print(f"BestM{best_edge}")
     check = str(best_edge[0]) + ',' + str(best_edge[1])
     used_edges[check] = 1
-    return new_graphs[0][2]
+    change_edge(G,best_edge)
+    subgraph_counts.update(new_graphs[0][2])
+    PAST[new_graphs[0][3]] = new_graphs[0][0]
+    return G
 
 
 def step(G, PAST, used_edges, edges, s, t, g6path_to_write_to, gEdgePath_to_write_to, subgraph_counts, path):
     new_graphs = []
-    new_edges = []
+
     for e in edges:
-        check = str(e[0]) + ',' + str(e[1])
-        if check not in used_edges.keys():
+        # check = str(e[0]) + ',' + str(e[1])
+        # if check not in used_edges.keys():
             # Obtain new vectorization
-            update_feature_from_edge(G, e[0], e[1], subgraph_counts)
+            new_subgraph_counts = update_feature_from_edge(G, e[0], e[1], subgraph_counts)
 
             is_counterexample = check_counterexample(G, s, t)
             # output to file
-            if (is_counterexample and False):
-                with open(g6path_to_write_to, 'a') as file:
-                    file.write(G.write(format='graph6'))
-                # Add last edge
-                temp_edges = cp.deepcopy(path)
-                temp_edges.append(e)
-                # Output edge path to file
-                with open(gEdgePath_to_write_to, 'a') as file:
-                    file.write(' '.join(temp_edges))
+            if (is_counterexample):
+                write_counterexample(G=G, 
+                                     g6path_to_write_to=g6path_to_write_to,
+                                     gEdgePath_to_write_to=gEdgePath_to_write_to,
+                                     e=e,
+                                     path=path)
 
-            vectorization = {**subgraph_counts, 'n': G.vcount(),
+            vectorization = {**new_subgraph_counts, 'n': G.vcount(),
                              's': s, 't': t, 'counter': is_counterexample}
             vectorization_string = str(vectorization)
             # Assume keys in PAST are strings
             if vectorization_string not in PAST.keys():
                 heuristic_val = heuristic(G)
-                PAST[vectorization_string] = heuristic_val
-                new_graphs.append((heuristic_val, e))
-            # remove_edge is O(n^2)
-            G.delete_edges((e[0], e[1]))
+                new_graphs.append((heuristic_val, e, new_subgraph_counts, vectorization_string))
+            # Change back edited edge
+            change_edge(G,e)
 
     if not new_graphs:
+        print("No new graphs.")
         return None
 
     new_graphs.sort(key=lambda x: x[0], reverse=True)  # sort by heuristic
@@ -115,8 +114,9 @@ def step(G, PAST, used_edges, edges, s, t, g6path_to_write_to, gEdgePath_to_writ
     check = str(best_edge[0]) + ',' + str(best_edge[1])
     used_edges[check] = 1
     # return graph with max heuristic
-    G.add_edge(*best_edge)
-    # print(f"Best{best_edge}")
+    change_edge(G,best_edge)
+    subgraph_counts.update(new_graphs[0][2])
+    PAST[new_graphs[0][3]] = new_graphs[0][0]
     return G
 
 # Assume we are only adding edges
@@ -126,14 +126,14 @@ def bfs(G, g6path_to_write_to, gEdgePath_to_write_to, PAST_path, s, t, PARALLEL)
     path = []
 
     n = G.vcount()
-    # we only consider edges not present in initial graph
+    # we consider all edges
     edges = [(i, j) for i in range(n)
-             for j in range(i+1, n) if not G.are_connected(i, j)]
+             for j in range(i+1, n)]
     # dictionary for used edges, e(u,v) has the key 'u,v'
     used_edges = dict()
 
-    for e in G.es:
-        used_edges[str(e.source) + ',' + str(e.target)] = 1
+    # for e in G.es:
+    #     used_edges[str(e.source) + ',' + str(e.target)] = 1
 
     PAST = load_vectorizations(PAST_path)
     subgraph_counts = count_subgraph_structures(G)
@@ -146,6 +146,8 @@ def bfs(G, g6path_to_write_to, gEdgePath_to_write_to, PAST_path, s, t, PARALLEL)
         else:
             G = step(G, PAST, used_edges, edges, s, t, g6path_to_write_to,
                      gEdgePath_to_write_to, subgraph_counts, path)
+        if iterations % 50 == 0:
+            print(f'{iterations} Iterations Completed')
     print("Total Iterations", iterations)
     print(path)
     # TODO Output PAST to file
@@ -154,20 +156,23 @@ def bfs(G, g6path_to_write_to, gEdgePath_to_write_to, PAST_path, s, t, PARALLEL)
 
 
 def main():
-    G = ig.Graph(25)
-    g6path_to_write_to = "../../data/found_counters/r39_graph.g6"
-    gEdgePath_to_write_to = "../../data/found_counters/r39_path.txt"
+    G = ig.Graph(8)
+    g6path_to_write_to = "data/found_counters/r34_graph.g6"
+    gEdgePath_to_write_to = "data/found_counters/r34_path.txt"
     PAST_path = "none"
     s = 3
-    t = 9
+    t = 4
     PARALLEL = False
     startTime = timeit.default_timer()
-    bfs(G, g6path_to_write_to, gEdgePath_to_write_to, PAST_path, s, t, PARALLEL)
-    print(f"Single Threaded Time Elapsed: {timeit.default_timer() - startTime}")
-    startTime = timeit.default_timer()
-    G2 = ig.Graph(25)
-    bfs(G2, g6path_to_write_to, gEdgePath_to_write_to, PAST_path, s, t, True)
-    print(f"Multi Threaded Time Elapsed: {timeit.default_timer() - startTime}")
+    # bfs(G, g6path_to_write_to, gEdgePath_to_write_to, PAST_path, s, t, PARALLEL)
+    # print(f"Single Threaded Time Elapsed: {timeit.default_timer() - startTime}")
+    # startTime = timeit.default_timer()
+    # G2 = ig.Graph(7)
+    # bfs(G2, g6path_to_write_to, gEdgePath_to_write_to, PAST_path, s, t, True)
+    # print(f"Multi Threaded Time Elapsed: {timeit.default_timer() - startTime}")
+    get_isomorphic_graphs(g6path_to_read_from=g6path_to_write_to,
+                          g6path_to_write_to='data/found_counters/r34_isograph.g6')
+    print(f"Iso Updater Time Elapsed: {timeit.default_timer() - startTime}")
 
 
 if __name__ == '__main__':
