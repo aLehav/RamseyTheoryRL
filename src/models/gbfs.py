@@ -146,7 +146,7 @@ def bfs(G, g6path_to_write_to, gEdgePath_to_write_to, PAST_path, s, t, PARALLEL)
         else:
             G = step(G, PAST, used_edges, edges, s, t, g6path_to_write_to,
                      gEdgePath_to_write_to, subgraph_counts, path)
-        if iterations % 50 == 0:
+        if iterations % 100 == 0:
             print(f'{iterations} Iterations Completed')
     print("Total Iterations", iterations)
     print(path)
@@ -156,22 +156,24 @@ def bfs(G, g6path_to_write_to, gEdgePath_to_write_to, PAST_path, s, t, PARALLEL)
 
 
 def main():
-    G = ig.Graph(8)
-    g6path_to_write_to = "data/found_counters/r34_graph.g6"
-    gEdgePath_to_write_to = "data/found_counters/r34_path.txt"
-    PAST_path = "none"
+    n = 11
     s = 3
-    t = 4
+    t = 5
+    G = ig.Graph(n)
+    g6path_to_write_to = "data/found_counters/r{s}_{t}_{n}_graph.g6"
+    gEdgePath_to_write_to = "data/found_counters/r{s}_{t}_{n}_path.txt"
+    PAST_path = "none"
     PARALLEL = False
     startTime = timeit.default_timer()
-    # bfs(G, g6path_to_write_to, gEdgePath_to_write_to, PAST_path, s, t, PARALLEL)
-    # print(f"Single Threaded Time Elapsed: {timeit.default_timer() - startTime}")
+    bfs(G, g6path_to_write_to, gEdgePath_to_write_to, PAST_path, s, t, PARALLEL)
+    print(f"Single Threaded Time Elapsed: {timeit.default_timer() - startTime}")
     # startTime = timeit.default_timer()
     # G2 = ig.Graph(7)
     # bfs(G2, g6path_to_write_to, gEdgePath_to_write_to, PAST_path, s, t, True)
     # print(f"Multi Threaded Time Elapsed: {timeit.default_timer() - startTime}")
+    startTime = timeit.default_timer()
     get_isomorphic_graphs(g6path_to_read_from=g6path_to_write_to,
-                          g6path_to_write_to='data/found_counters/r34_isograph.g6')
+                          g6path_to_write_to='data/found_counters/r{s}_{t}_{n}_isograph.g6')
     print(f"Iso Updater Time Elapsed: {timeit.default_timer() - startTime}")
 
 
