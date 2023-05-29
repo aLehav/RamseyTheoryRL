@@ -52,27 +52,34 @@ def init_neptune(params,
 def load_neptune(project,
                  model_name,
                  model_id,
-                 run_id
+                 run_id,
+                 for_running=False
                  ):
     """
     Load in neptune Run and ModelVersion objects.
     """
     # Retrieve the API token from the environment variable
     api_token = os.environ.get('NEPTUNE_API_TOKEN')
+    if not for_running:
+        run = neptune.init_run(
+            with_id=run_id,
+            project=project,
+            api_token=api_token
+        )
+        model_version = neptune.init_model_version(
+            with_id=model_id,
+            model=model_name,
+            project=project,
+            api_token=api_token)
 
-    run = neptune.init_run(
-        with_id=run_id,
-        project=project,
-        api_token=api_token
-    )
-
-    model_version = neptune.init_model_version(
-        with_id=model_id,
-        model=model_name,
-        project=project,
-        api_token=api_token)
-
-    return run, model_version
+        return run, model_version
+    else:
+        model_version = neptune.init_model_version(
+            with_id=model_id,
+            model=model_name,
+            project=project,
+            api_token=api_token)
+        return model_version
 
 def get_neptune_cbk(run: neptune.Run):
     return NeptuneCallback(run=run, base_namespace="training")

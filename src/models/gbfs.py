@@ -1,7 +1,7 @@
 import multiprocessing
 import igraph as ig
+import numpy as np
 import networkx as nx
-import copy as cp
 import random
 import timeit
 import pickle
@@ -12,9 +12,29 @@ parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(parent_dir)
 from utils.gfeatures import *
 from utils.guseful import *
+from models.heuristic import load_model_by_id
 
-def heuristic(G):
-    return random.random()
+PROJECT = "alehav/RamseyRL"
+MODEL_NAME = "RAM-HEUR"
+MODEL_ID = "RAM-HEUR-31"
+RUN_ID = "RAM-40"
+HEURISTIC_TYPE = "DNN"
+N = 8
+S = 3
+T = 4
+
+if HEURISTIC_TYPE == "RANDOM":
+    def heuristic(vectorization):
+        return random.random()
+elif HEURISTIC_TYPE == "DNN":
+    model = load_model_by_id(project=PROJECT,
+                            model_name=MODEL_NAME,
+                            model_id=MODEL_ID,
+                            run_id=RUN_ID,
+                            for_running=True)
+    def heuristic(vectorization): 
+        return model.predict(np.array(list(vectorization.values())[:-1]).reshape(1,-1),
+                             verbose=0)[0][0]
 
 # Load in a dictionary of vectorizations and heuristics, assume vectorization is a string TODO remove dict()
 def load_vectorizations(PAST_path):
@@ -48,7 +68,7 @@ def process_edge(e, G, PAST, used_edges, subgraph_counts, s, t, g6path_to_write_
     vectorization_string = str(vectorization)
     # Assume keys in PAST are strings
     if vectorization_string not in PAST.keys():
-        heuristic_val = heuristic(G)
+        heuristic_val = heuristic(vectorization)
         return (heuristic_val, e, new_subgraph_counts, vectorization_string)
         new_graphs.append((heuristic_val, e, G_prime))
 
@@ -99,7 +119,7 @@ def step(G, PAST, used_edges, edges, s, t, g6path_to_write_to, gEdgePath_to_writ
             vectorization_string = str(vectorization)
             # Assume keys in PAST are strings
             if vectorization_string not in PAST.keys():
-                heuristic_val = heuristic(G)
+                heuristic_val = heuristic(vectorization)
                 new_graphs.append((heuristic_val, e, new_subgraph_counts, vectorization_string))
             # Change back edited edge
             change_edge(G,e)
@@ -109,6 +129,7 @@ def step(G, PAST, used_edges, edges, s, t, g6path_to_write_to, gEdgePath_to_writ
         return None
 
     new_graphs.sort(key=lambda x: x[0], reverse=True)  # sort by heuristic
+    print("Highest fitness: ",new_graphs[0][0])
     best_edge = (new_graphs[0][1][0], new_graphs[0][1][1])
     path.append(best_edge)
     check = str(best_edge[0]) + ',' + str(best_edge[1])
@@ -146,7 +167,7 @@ def bfs(G, g6path_to_write_to, gEdgePath_to_write_to, PAST_path, s, t, PARALLEL)
         else:
             G = step(G, PAST, used_edges, edges, s, t, g6path_to_write_to,
                      gEdgePath_to_write_to, subgraph_counts, path)
-        if iterations % 100 == 0:
+        if iterations % 10 == 0:
             print(f'{iterations} Iterations Completed')
     print("Total Iterations", iterations)
     print(path)
@@ -156,12 +177,12 @@ def bfs(G, g6path_to_write_to, gEdgePath_to_write_to, PAST_path, s, t, PARALLEL)
 
 
 def main():
-    n = 11
-    s = 3
-    t = 5
-    G = ig.Graph(n)
-    g6path_to_write_to = "data/found_counters/r{s}_{t}_{n}_graph.g6"
-    gEdgePath_to_write_to = "data/found_counters/r{s}_{t}_{n}_path.txt"
+    n = N
+    s = S
+    t = T
+    G = ig.Graph.GRG(n, n/2/(n-1))
+    g6path_to_write_to = f"data/found_counters/r{s}_{t}_{n}_graph.g6"
+    gEdgePath_to_write_to = f"data/found_counters/r{s}_{t}_{n}_path.txt"
     PAST_path = "none"
     PARALLEL = False
     startTime = timeit.default_timer()
@@ -171,10 +192,11 @@ def main():
     # G2 = ig.Graph(7)
     # bfs(G2, g6path_to_write_to, gEdgePath_to_write_to, PAST_path, s, t, True)
     # print(f"Multi Threaded Time Elapsed: {timeit.default_timer() - startTime}")
-    startTime = timeit.default_timer()
-    get_isomorphic_graphs(g6path_to_read_from=g6path_to_write_to,
-                          g6path_to_write_to='data/found_counters/r{s}_{t}_{n}_isograph.g6')
-    print(f"Iso Updater Time Elapsed: {timeit.default_timer() - startTime}")
+    if os.path.exists(g6path_to_write_to):
+        startTime = timeit.default_timer()
+        get_isomorphic_graphs(g6path_to_read_from=g6path_to_write_to,
+                            g6path_to_write_to=f'data/found_counters/r{s}_{t}_{n}_isograph.g6')
+        print(f"Iso Updater Time Elapsed: {timeit.default_timer() - startTime}")
 
 
 if __name__ == '__main__':
