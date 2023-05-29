@@ -1,6 +1,6 @@
 import itertools
 import igraph as ig
-
+import matplotlib.pyplot as plt
 
 def is_complete(G):
     n = G.vcount()
@@ -67,6 +67,7 @@ def get_isomorphic_graphs(g6path_to_read_from, g6path_to_write_to):
     import os
     # Function to check if two graphs are isomorphic
     def are_graphs_isomorphic(G1, G2):
+        print(nx.is_isomorphic(G1, G2))
         return nx.is_isomorphic(G1, G2)
 
     # Function to find isomorphic graphs from a list
@@ -88,6 +89,14 @@ def get_isomorphic_graphs(g6path_to_read_from, g6path_to_write_to):
 
     # Find isomorphic graphs
     isomorphic_graphs = find_isomorphic_graphs(graph_list)
+    i = 0
+    for graph in isomorphic_graphs:
+        pos = nx.circular_layout(graph)
+        nx.draw_networkx(graph, pos=pos)
+        plt.savefig(f"figure_{i}.png")
+        plt.clf()
+        i += 1
+
 
     tempfile_path = 'temp.g6'
     for isomorphic_graph in isomorphic_graphs:
