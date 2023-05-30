@@ -71,11 +71,9 @@ def get_unique_graphs(g6path_to_read_from, g6path_to_write_to):
             is_unique = True
             for j in range(i + 1, len(graph_list)):
                 if are_graphs_isomorphic(graph_list[i], graph_list[j]):
-                    print(f"Graph {i} matches graph {j}.")
                     is_unique = False
                     break
             if is_unique:
-                print(f"Graph {i} is unique to all after it")
                 unique_graphs.append(graph_list[i])
         return unique_graphs
 

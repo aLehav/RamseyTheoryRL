@@ -6,8 +6,9 @@ import random
 import timeit
 import pickle
 from functools import partial
-import sys
+import math
 import tqdm
+import sys
 import os
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(parent_dir)
@@ -17,11 +18,11 @@ from models.heuristic import load_model_by_id
 
 PROJECT = "alehav/RamseyRL"
 MODEL_NAME = "RAM-HEUR"
-MODEL_ID = "RAM-HEUR-31"
-RUN_ID = "RAM-40"
+MODEL_ID = "RAM-HEUR-34"
+RUN_ID = "RAM-43"
 # Choose from RANDOM, DNN, SCALED_DNN
-HEURISTIC_TYPE = "DNN"
-N = 6
+HEURISTIC_TYPE = "SCALED_DNN"
+N = 8
 S = 3
 T = 4
 
@@ -39,6 +40,18 @@ elif HEURISTIC_TYPE == "DNN":
     #                          verbose=0)[0][0]
     def heuristic(vectorizations):
         X = np.array([list(vec.values())[:-1] for vec in vectorizations])
+        predictions = model.predict(X, verbose=0)
+        return [prediction[0] for prediction in predictions]
+elif HEURISTIC_TYPE == "SCALED_DNN":
+    model = load_model_by_id(project=PROJECT,
+                            model_name=MODEL_NAME,
+                            model_id=MODEL_ID,
+                            run_id=RUN_ID,
+                            for_running=True)
+    scaler = float(math.comb(N, 4))
+    def heuristic(vectorizations):
+        X = np.array([list(vec.values())[:-1] for vec in vectorizations]).astype(float)
+        X[:11] /= scaler
         predictions = model.predict(X, verbose=0)
         return [prediction[0] for prediction in predictions]
 
@@ -129,7 +142,7 @@ def step(G, PAST, edges, s, t, g6path_to_write_to, subgraph_counts):
     heuristic_values = heuristic(vectorizations)
     new_graphs = [(heuristic_val, e, subgraph_counts, vec) for (heuristic_val, (e, subgraph_counts, vec)) in zip(heuristic_values, new_graphs)]
     new_graphs.sort(key=lambda x: x[0], reverse=True)  # sort by heuristic
-
+    # print(f'Max fitness: {new_graphs[0][0]}')
     change_edge(G,new_graphs[0][1])
     subgraph_counts.update(new_graphs[0][2])
     PAST[new_graphs[0][3]] = new_graphs[0][0]
@@ -173,9 +186,9 @@ def main():
     s = S
     t = T
     G = ig.Graph.GRG(n, n/2/(n-1))
-    g6path_to_write_to = f"data/found_counters/r{s}_{t}_{n}_graph.g6"
-    # gEdgePath_to_write_to = f"data/found_counters/r{s}_{t}_{n}_path.txt"
-    g6iso_path_to_write_to = f'data/found_counters/r{s}_{t}_{n}_isograph.g6'
+    counter_path = f'data/found_counters/scaled_dnn'
+    g6path_to_write_to = f"{counter_path}/r{s}_{t}_{n}_graph.g6"
+    g6iso_path_to_write_to = f'{counter_path}/r{s}_{t}_{n}_isograph.g6'
     PAST_path = "none"
     PARALLEL = False
     startTime = timeit.default_timer()

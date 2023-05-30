@@ -45,22 +45,20 @@ def load_model_by_id(project,
 def main():
     PROJECT = "alehav/RamseyRL"
     MODEL_NAME = "RAM-HEUR"
-    PARAMS = {'epochs': 100, 'batch_size':16, 'optimizer':'adam'}
+    PARAMS = {'epochs': 1, 'batch_size':16, 'optimizer':'adam'}
     # Run with one CSV_PATH for 80/20 test/train split, and TRAIN_CSV_LIST and TEST_CSV_LIST otherwise
     BATCH_TRAIN_TEST = True
 
-    TRAIN = False
-    TEST = True
+    TRAIN = True
+    TEST = False
     MODEL_ID = "RAM-HEUR-31"
     RUN_ID = "RAM-40"
 
     if BATCH_TRAIN_TEST:
         if TRAIN:
-            TRAIN_CSV_LIST = ['data/csv/all_leq6.csv',
-                        'data/csv/ramsey_3_4.csv',
-                        'data/csv/ramsey_3_5.csv',
-                        'data/csv/ramsey_3_6.csv',
-                        'data/csv/ramsey_3_7.csv']
+            TRAIN_PATH = 'data/csv/scaled/'
+            CSV_LIST = ['all_leq9','ramsey_3_4','ramsey_3_5','ramsey_3_6','ramsey_3_7','ramsey_3_9','ramsey_4_4']
+            TRAIN_CSV_LIST = [f'{TRAIN_PATH}{CSV}.csv' for CSV in CSV_LIST]
             train_X, train_y = train.split_X_y_list(TRAIN_CSV_LIST)
             print(f"train_X shape: {train_X.shape}, train_y shape: {train_y.shape}.")
         if TEST:
