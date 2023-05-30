@@ -1,6 +1,7 @@
 import itertools
 import igraph as ig
 import matplotlib.pyplot as plt
+import sys
 
 def is_complete(G):
     n = G.vcount()
@@ -32,7 +33,7 @@ def change_edge(G, e):
     G.delete_edges([e]) if G.are_connected(*e) else G.add_edge(*e)
 
 
-def write_counterexample(G, g6path_to_write_to, gEdgePath_to_write_to, e, path):
+def write_counterexample(G, g6path_to_write_to):
     import os
     import networkx as nx
 
@@ -54,48 +55,44 @@ def write_counterexample(G, g6path_to_write_to, gEdgePath_to_write_to, e, path):
     # Remove the temporary file
     os.remove(tempfile_path)
 
-    # Add last edge
-    temp_edges = [f"{edge[0]},{edge[1]}" for edge in path]
-    temp_edges.append(f"{e[0]},{e[1]}\n")
-    # Output edge path to file
-    with open(gEdgePath_to_write_to, 'a') as file:
-        file.write(' '.join(temp_edges))
-    print(f'Counterexample found.')
+    sys.stdout.write('\033[1m\033[96mCounterexample found.\033[0m\n')
 
-def get_isomorphic_graphs(g6path_to_read_from, g6path_to_write_to):
+def get_unique_graphs(g6path_to_read_from, g6path_to_write_to):
     import networkx as nx
     import os
     # Function to check if two graphs are isomorphic
     def are_graphs_isomorphic(G1, G2):
-        print(nx.is_isomorphic(G1, G2))
         return nx.is_isomorphic(G1, G2)
 
-    # Function to find isomorphic graphs from a list
-    def find_isomorphic_graphs(graph_list):
-        isomorphic_graphs = []
+    # Function to find unique graphs from a list
+    def find_unique_graphs(graph_list):
+        unique_graphs = []
         for i in range(len(graph_list)):
-            is_isomorphic = True
+            is_unique = True
             for j in range(i + 1, len(graph_list)):
-                if not are_graphs_isomorphic(graph_list[i], graph_list[j]):
-                    is_isomorphic = False
+                if are_graphs_isomorphic(graph_list[i], graph_list[j]):
+                    print(f"Graph {i} matches graph {j}.")
+                    is_unique = False
                     break
-            if is_isomorphic:
-                isomorphic_graphs.append(graph_list[i])
-        return isomorphic_graphs
+            if is_unique:
+                print(f"Graph {i} is unique to all after it")
+                unique_graphs.append(graph_list[i])
+        return unique_graphs
 
     # Read the g6 file and load graphs into a list
     graph_list = nx.read_graph6(g6path_to_read_from)
     graph_list = [graph_list] if type(graph_list) != list else graph_list
 
     # Find isomorphic graphs
-    isomorphic_graphs = find_isomorphic_graphs(graph_list)
-    i = 0
-    for graph in isomorphic_graphs:
-        pos = nx.circular_layout(graph)
-        nx.draw_networkx(graph, pos=pos)
-        plt.savefig(f"figure_{i}.png")
-        plt.clf()
-        i += 1
+    isomorphic_graphs = find_unique_graphs(graph_list)
+    # Graphing utilities:
+    # i = 0
+    # for graph in isomorphic_graphs:
+    #     pos = nx.circular_layout(graph)
+    #     nx.draw_networkx(graph, pos=pos)
+    #     plt.savefig(f"figure_{i}.png")
+    #     plt.clf()
+    #     i += 1
 
 
     tempfile_path = 'temp.g6'

@@ -7,6 +7,7 @@ import timeit
 import pickle
 from functools import partial
 import sys
+import tqdm
 import os
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(parent_dir)
@@ -18,8 +19,9 @@ PROJECT = "alehav/RamseyRL"
 MODEL_NAME = "RAM-HEUR"
 MODEL_ID = "RAM-HEUR-31"
 RUN_ID = "RAM-40"
+# Choose from RANDOM, DNN, SCALED_DNN
 HEURISTIC_TYPE = "DNN"
-N = 8
+N = 6
 S = 3
 T = 4
 
@@ -101,7 +103,7 @@ def step_par(G, PAST, used_edges, edges, s, t, g6path_to_write_to, gEdgePath_to_
     return G
 
 
-def step(G, PAST, edges, s, t, g6path_to_write_to, gEdgePath_to_write_to, subgraph_counts, path):
+def step(G, PAST, edges, s, t, g6path_to_write_to, subgraph_counts):
     new_graphs = []
     vectorizations = []
 
@@ -112,7 +114,7 @@ def step(G, PAST, edges, s, t, g6path_to_write_to, gEdgePath_to_write_to, subgra
         vectorizations.append(vectorization)
 
         if (is_counterexample):
-            write_counterexample(G=G, g6path_to_write_to=g6path_to_write_to, gEdgePath_to_write_to=gEdgePath_to_write_to, e=e, path=path)
+            write_counterexample(G=G, g6path_to_write_to=g6path_to_write_to)
  
         if str(vectorization) not in PAST.keys():
             new_graphs.append((e, new_subgraph_counts, str(vectorization)))
@@ -128,11 +130,7 @@ def step(G, PAST, edges, s, t, g6path_to_write_to, gEdgePath_to_write_to, subgra
     new_graphs = [(heuristic_val, e, subgraph_counts, vec) for (heuristic_val, (e, subgraph_counts, vec)) in zip(heuristic_values, new_graphs)]
     new_graphs.sort(key=lambda x: x[0], reverse=True)  # sort by heuristic
 
-    print("Highest fitness: ", new_graphs[0][0])
-    best_edge = (new_graphs[0][1][0], new_graphs[0][1][1])
-    path.append(best_edge)
-
-    change_edge(G,best_edge)
+    change_edge(G,new_graphs[0][1])
     subgraph_counts.update(new_graphs[0][2])
     PAST[new_graphs[0][3]] = new_graphs[0][0]
 
@@ -140,10 +138,7 @@ def step(G, PAST, edges, s, t, g6path_to_write_to, gEdgePath_to_write_to, subgra
 
 # Assume we are only adding edges
 
-def bfs(G, g6path_to_write_to, gEdgePath_to_write_to, PAST_path, s, t, PARALLEL):
-    # Maintain a list of edge additions for PATH
-    path = []
-
+def bfs(G, g6path_to_write_to, PAST_path, s, t, PARALLEL):
     n = G.vcount()
     # we consider all edges
     edges = [(i, j) for i in range(n)
@@ -151,19 +146,23 @@ def bfs(G, g6path_to_write_to, gEdgePath_to_write_to, PAST_path, s, t, PARALLEL)
 
     PAST = load_vectorizations(PAST_path)
     subgraph_counts = count_subgraph_structures(G)
+    ITER_BATCH = 50
     iterations = 0
+    progress_bar = tqdm.tqdm(total=ITER_BATCH)
     while G is not None:
-        iterations += 1
         if (PARALLEL):
-            G = step_par(G, PAST, dict(), edges, s, t, g6path_to_write_to,
-                         gEdgePath_to_write_to, subgraph_counts, path)
+            # TODO Update to match step functionality
+            G = step_par(G, PAST, dict(), edges, s, t, g6path_to_write_to, subgraph_counts)
         else:
-            G = step(G, PAST, edges, s, t, g6path_to_write_to,
-                     gEdgePath_to_write_to, subgraph_counts, path)
-        if iterations % 10 == 0:
-            print(f'{iterations} Iterations Completed')
+            G = step(G, PAST, edges, s, t, g6path_to_write_to, subgraph_counts)
+            
+        iterations += 1
+        progress_bar.update(1)
+        progress_bar.set_postfix(iterations=f'{progress_bar.n}/{progress_bar.total} Iterations Completed')
+        if iterations % ITER_BATCH == 0:
+            progress_bar = tqdm.tqdm(initial=iterations, total=iterations+ITER_BATCH)
+    progress_bar.close()
     print("Total Iterations", iterations)
-    print(path)
     # TODO Output PAST to file
     # with open(PAST_path, 'wb') as f:
     #     pickle.dump(PAST, f)
@@ -175,20 +174,20 @@ def main():
     t = T
     G = ig.Graph.GRG(n, n/2/(n-1))
     g6path_to_write_to = f"data/found_counters/r{s}_{t}_{n}_graph.g6"
-    gEdgePath_to_write_to = f"data/found_counters/r{s}_{t}_{n}_path.txt"
+    # gEdgePath_to_write_to = f"data/found_counters/r{s}_{t}_{n}_path.txt"
     g6iso_path_to_write_to = f'data/found_counters/r{s}_{t}_{n}_isograph.g6'
-    # PAST_path = "none"
-    # PARALLEL = False
-    # startTime = timeit.default_timer()
-    # bfs(G, g6path_to_write_to, gEdgePath_to_write_to, PAST_path, s, t, PARALLEL)
-    # print(f"Single Threaded Time Elapsed: {timeit.default_timer() - startTime}")
+    PAST_path = "none"
+    PARALLEL = False
+    startTime = timeit.default_timer()
+    bfs(G, g6path_to_write_to, PAST_path, s, t, PARALLEL)
+    print(f"Single Threaded Time Elapsed: {timeit.default_timer() - startTime}")
     # startTime = timeit.default_timer()
     # G2 = ig.Graph(7)
     # bfs(G2, g6path_to_write_to, gEdgePath_to_write_to, PAST_path, s, t, True)
     # print(f"Multi Threaded Time Elapsed: {timeit.default_timer() - startTime}")
     if os.path.exists(g6path_to_write_to):
         startTime = timeit.default_timer()
-        get_isomorphic_graphs(g6path_to_read_from=g6iso_path_to_write_to,
+        get_unique_graphs(g6path_to_read_from=g6path_to_write_to,
                             g6path_to_write_to=g6iso_path_to_write_to)
         print(f"Iso Updater Time Elapsed: {timeit.default_timer() - startTime}")
 
