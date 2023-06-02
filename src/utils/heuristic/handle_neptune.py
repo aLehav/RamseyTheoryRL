@@ -1,6 +1,7 @@
 import neptune
 import os
 from neptune.integrations.tensorflow_keras import NeptuneCallback
+from neptune.utils import stringify_unsupported
 
 def init_neptune_model(project, name='Heuristic esimator', key='HEUR'):
     """
@@ -17,7 +18,7 @@ def init_neptune(params, project, model_name):
     api_token = os.environ.get('NEPTUNE_API_TOKEN')
     run = neptune.init_run(project=project, api_token=api_token)
     model_version = neptune.init_model_version(model=model_name, project=project, api_token=api_token)
-    run['parameters'] = params
+    run['parameters'] = stringify_unsupported(params)
     return run, model_version
 
 def load_neptune(project, model_name, model_id, run_id):
