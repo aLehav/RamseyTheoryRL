@@ -112,8 +112,6 @@ def step(g, past, edges, s, t, unique_path, subgraph_counts, training_data: list
 
     return g
 
-# Assume we are only adding edges
-
 def bfs(g, unique_path, past, counters, s, t, n, parallel, iter_batch, update_model, heuristic, update_running, oldIterations=0, batches=None):
     # we consider all edges
     edges = [(i, j) for i in range(n)
@@ -179,7 +177,7 @@ def main():
             
 
     if HEURISTIC_TYPE == "RANDOM":
-        def heuristic(vectorization):
+        def heuristic(vectorizations):
             return random.random()
     elif HEURISTIC_TYPE == "DNN":
         def heuristic(vectorizations):

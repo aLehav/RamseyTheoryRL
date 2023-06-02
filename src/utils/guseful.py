@@ -35,7 +35,7 @@ def change_edge(G, e):
     G.delete_edges([e]) if G.are_connected(*e) else G.add_edge(*e)
 
 def are_graphs_isomorphic(G1, G2):
-        return nx.is_isomorphic(G1, G2)
+    return nx.is_isomorphic(G1, G2)
 
 def consider_counterexample(G, counters, counter_path):
     nx_graph = nx.Graph(G.get_edgelist())
