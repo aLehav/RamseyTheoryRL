@@ -57,7 +57,10 @@ def write_counterexample(G, g6path_to_write_to):
 
     sys.stdout.write('\033[1m\033[96mCounterexample found.\033[0m\n')
 
-def get_unique_graphs(g6path_to_read_from, g6path_to_write_to):
+def get_unique_graphs(read_path, write_path):
+    """
+    Write all unique graphs from one path of graphs to another and return quantity.
+    """
     import networkx as nx
     import os
     # Function to check if two graphs are isomorphic
@@ -78,14 +81,14 @@ def get_unique_graphs(g6path_to_read_from, g6path_to_write_to):
         return unique_graphs
 
     # Read the g6 file and load graphs into a list
-    graph_list = nx.read_graph6(g6path_to_read_from)
+    graph_list = nx.read_graph6(read_path)
     graph_list = [graph_list] if type(graph_list) != list else graph_list
 
-    # Find isomorphic graphs
-    isomorphic_graphs = find_unique_graphs(graph_list)
+    # Find unique graphs
+    unique_graphs = find_unique_graphs(graph_list)
     # Graphing utilities:
     # i = 0
-    # for graph in isomorphic_graphs:
+    # for graph in unique_graphs:
     #     pos = nx.circular_layout(graph)
     #     nx.draw_networkx(graph, pos=pos)
     #     plt.savefig(f"figure_{i}.png")
@@ -94,17 +97,19 @@ def get_unique_graphs(g6path_to_read_from, g6path_to_write_to):
 
 
     tempfile_path = 'temp.g6'
-    for isomorphic_graph in isomorphic_graphs:
+    for unique_graph in unique_graphs:
         # Write the graph6 representation to a temporary file
-        nx.write_graph6(isomorphic_graph, tempfile_path, header=False)
+        nx.write_graph6(unique_graph, tempfile_path, header=False)
 
         # Read the graph6 data from the temporary file
         with open(tempfile_path, 'r') as temp_file:
             graph6_data = temp_file.read()
 
         # Append the graph6 data to the final output file
-        with open(g6path_to_write_to, 'a') as file:
+        with open(write_path, 'a') as file:
             file.write(graph6_data)
 
         # Remove the temporary file
     os.remove(tempfile_path)
+
+    return len(unique_graphs)

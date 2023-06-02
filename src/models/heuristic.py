@@ -10,36 +10,14 @@ import utils.heuristic.train_heuristic as train
 import utils.heuristic.test_heuristic as test
 import utils.heuristic.handle_neptune as hn
 
-def load_model_by_id(project,
-                    model_name,
-                    model_id,
-                    run_id,
-                    for_running=False):
-    if not for_running:
-        run, model_version = hn.load_neptune(project=project,
-                                    model_name=model_name,
-                                    model_id=model_id,
-                                    run_id=run_id,
-                                    for_running=for_running)
+def load_model_by_id(project, model_name, model_id, run_id):
+        run, model_version = hn.load_neptune(project=project, model_name=model_name, model_id=model_id, run_id=run_id)
         
         model_version['saved_model'].download('my_model')
         with zipfile.ZipFile('my_model/saved_model.zip', 'r') as zip_ref:
             zip_ref.extractall('/')
         model = keras.models.load_model('my_model')
         return run, model_version, model
-    else:
-        model_version = hn.load_neptune(project=project,
-                                    model_name=model_name,
-                                    model_id=model_id,
-                                    run_id=run_id,
-                                    for_running=for_running)
-        
-        model_version['saved_model'].download('my_model')
-        with zipfile.ZipFile('my_model/saved_model.zip', 'r') as zip_ref:
-            zip_ref.extractall('/')
-        model_version.stop()
-        model = keras.models.load_model('my_model')
-        return model
 
 
 def main():

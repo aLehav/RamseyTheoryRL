@@ -61,6 +61,5 @@ def save_trained_model(model_version: neptune.ModelVersion,
     model_version["saved_model"].upload_files("my_model")
     for name in glob.glob("variables/*"):
         model_version[name].upload(name)
-    print(f"Saved model.")
 
     
