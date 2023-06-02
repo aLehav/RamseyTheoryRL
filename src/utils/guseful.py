@@ -1,6 +1,8 @@
 import itertools
 import igraph as ig
 import matplotlib.pyplot as plt
+import networkx as nx
+import os
 import sys
 
 def is_complete(G):
@@ -32,84 +34,19 @@ def check_counterexample(G, s, t):
 def change_edge(G, e):
     G.delete_edges([e]) if G.are_connected(*e) else G.add_edge(*e)
 
-
-def write_counterexample(G, g6path_to_write_to):
-    import os
-    import networkx as nx
-
-    # Convert igraph graph to networkx graph
-    nx_graph = nx.Graph(G.get_edgelist())
-
-    # Write the graph6 representation to a temporary file
-    tempfile_path = 'temp.g6'
-    nx.write_graph6(nx_graph, tempfile_path, header=False)
-
-    # Read the graph6 data from the temporary file
-    with open(tempfile_path, 'r') as temp_file:
-        graph6_data = temp_file.read()
-
-    # Append the graph6 data to the final output file
-    with open(g6path_to_write_to, 'a') as file:
-        file.write(graph6_data)
-
-    # Remove the temporary file
-    os.remove(tempfile_path)
-
-    sys.stdout.write('\033[1m\033[96mCounterexample found.\033[0m\n')
-
-def get_unique_graphs(read_path, write_path):
-    """
-    Write all unique graphs from one path of graphs to another and return quantity.
-    """
-    import networkx as nx
-    import os
-    # Function to check if two graphs are isomorphic
-    def are_graphs_isomorphic(G1, G2):
+def are_graphs_isomorphic(G1, G2):
         return nx.is_isomorphic(G1, G2)
 
-    # Function to find unique graphs from a list
-    def find_unique_graphs(graph_list):
-        unique_graphs = []
-        for i in range(len(graph_list)):
-            is_unique = True
-            for j in range(i + 1, len(graph_list)):
-                if are_graphs_isomorphic(graph_list[i], graph_list[j]):
-                    is_unique = False
-                    break
-            if is_unique:
-                unique_graphs.append(graph_list[i])
-        return unique_graphs
-
-    # Read the g6 file and load graphs into a list
-    graph_list = nx.read_graph6(read_path)
-    graph_list = [graph_list] if type(graph_list) != list else graph_list
-
-    # Find unique graphs
-    unique_graphs = find_unique_graphs(graph_list)
-    # Graphing utilities:
-    # i = 0
-    # for graph in unique_graphs:
-    #     pos = nx.circular_layout(graph)
-    #     nx.draw_networkx(graph, pos=pos)
-    #     plt.savefig(f"figure_{i}.png")
-    #     plt.clf()
-    #     i += 1
-
-
-    tempfile_path = 'temp.g6'
-    for unique_graph in unique_graphs:
-        # Write the graph6 representation to a temporary file
-        nx.write_graph6(unique_graph, tempfile_path, header=False)
-
-        # Read the graph6 data from the temporary file
-        with open(tempfile_path, 'r') as temp_file:
-            graph6_data = temp_file.read()
-
-        # Append the graph6 data to the final output file
-        with open(write_path, 'a') as file:
-            file.write(graph6_data)
-
-        # Remove the temporary file
-    os.remove(tempfile_path)
-
-    return len(unique_graphs)
+def consider_counterexample(G, counters, counter_path):
+    nx_graph = nx.Graph(G.get_edgelist())
+    is_unique = True
+    for counter in counters:
+        if are_graphs_isomorphic(nx_graph, counter):
+            is_unique = False
+            sys.stdout.write('\033[1m\033[92mCounterexample found but not unique.\033[0m\n')
+            break
+    if is_unique:
+        sys.stdout.write('\033[1m\033[96mCounterexample found and added.\033[0m\n')
+        counters.append(nx_graph)
+        with open(counter_path, 'a') as file:
+            file.write(nx.to_graph6_bytes(nx_graph, header=False).decode('ascii'))

@@ -24,11 +24,11 @@ from models.heuristic import load_model_by_id
 
 PROJECT = "alehav/RamseyRL"
 MODEL_NAME = "RAM-HEUR"
-LOAD_MODEL = False
+LOAD_MODEL = True
 # Choose from RANDOM, DNN, SCALED_DNN
 HEURISTIC_TYPE = "SCALED_DNN"
-PARAMS = {'training_epochs': 5, 'epochs': 1, 'batch_size':32, 'optimizer':'adam', 'loss':tf.keras.losses.BinaryCrossentropy(from_logits=False, label_smoothing=0.2),'last_activation':'sigmoid','pretrain':True}
-N = 10
+PARAMS = {'training_epochs': 1, 'epochs': 1, 'batch_size':32, 'optimizer':'adam', 'loss':tf.keras.losses.BinaryCrossentropy(from_logits=False, label_smoothing=0.2),'last_activation':'sigmoid','pretrain':True, 'heuristic_type':HEURISTIC_TYPE}
+N = 9
 S = 3
 T = 5
 
@@ -44,7 +44,7 @@ def process_edge(e, G, PAST, used_edges, subgraph_counts, s, t, g6path_to_write_
 
     # output to file
     if (is_counterexample):
-       write_counterexample(G=G, g6path_to_write_to=g6path_to_write_to, gEdgePath_to_write_to=gEdgePath_to_write_to, e=e, path=path)
+       consider_counterexample(G=G, g6path_to_write_to=g6path_to_write_to, gEdgePath_to_write_to=gEdgePath_to_write_to, e=e, path=path)
     # Change back edited edge
     change_edge(G, e)
 
@@ -80,7 +80,7 @@ def step_par(G, PAST, used_edges, edges, s, t, g6path_to_write_to, gEdgePath_to_
     return G
 
 
-def step(g, past, edges, s, t, g6path_to_write_to, subgraph_counts, training_data: list, heuristic):
+def step(g, past, edges, s, t, unique_path, subgraph_counts, training_data: list, counters: list, heuristic):
     new_graphs = []
     vectorizations = []
 
@@ -91,12 +91,11 @@ def step(g, past, edges, s, t, g6path_to_write_to, subgraph_counts, training_dat
         vectorizations.append(vectorization)
         
         if (is_counterexample):
-            write_counterexample(G=g, g6path_to_write_to=g6path_to_write_to)
+            consider_counterexample(G=g, counters=counters, counter_path=unique_path)
  
         if str(vectorization) not in past.keys():
             new_graphs.append((e, new_subgraph_counts, vectorization))
 
-        # Change back edited edge
         change_edge(g,e)
 
     training_data.extend(vectorizations)
@@ -111,56 +110,48 @@ def step(g, past, edges, s, t, g6path_to_write_to, subgraph_counts, training_dat
     subgraph_counts.update(best[1])
     past[str(best[2])] = heuristic_values[max_index]
 
-    # new_graphs = [(heuristic_val, e, subgraph_counts, vec) for (heuristic_val, (e, subgraph_counts, vec)) in zip(heuristic_values, new_graphs)]
-    # new_graphs.sort(key=lambda x: x[0], reverse=True)  # sort by heuristic
-    # change_edge(g,new_graphs[0][1])
-    # subgraph_counts.update(new_graphs[0][2])
-    # past[new_graphs[0][3]] = new_graphs[0][0]
-
     return g
 
 # Assume we are only adding edges
 
-def bfs(g, g6path_to_write_to, past, s, t, PARALLEL, iter_batch, update_model, heuristic, run, model_version):
-    n = g.vcount()
+def bfs(g, unique_path, past, counters, s, t, n, PARALLEL, iter_batch, update_model, heuristic, update_running, oldIterations=0):
     # we consider all edges
     edges = [(i, j) for i in range(n)
              for j in range(i+1, n)]
 
     # Will store a list of vectors either expanded or found to be counterexamples, and upate a model after a given set of iterations
     training_data = []
-
     subgraph_counts = count_subgraph_structures(g)
-    iterations = 0
-    progress_bar = tqdm.tqdm(total=iter_batch, leave=False)
+    iterations = oldIterations
+    progress_bar = tqdm.tqdm(initial=iterations, total=iterations+iter_batch, leave=False)
     while g is not None:
         if (PARALLEL):
             # TODO Update to match step functionality
-            g = step_par(g, past, dict(), edges, s, t, g6path_to_write_to, subgraph_counts)
+            g = step_par(g, past, dict(), edges, s, t, unique_path, subgraph_counts)
         else:
-            g = step(g, past, edges, s, t, g6path_to_write_to, subgraph_counts, training_data, heuristic)
+            g = step(g, past, edges, s, t, unique_path, subgraph_counts, training_data, counters, heuristic)
 
         iterations += 1
         progress_bar.update(1)
         progress_bar.set_postfix(iterations=f'{progress_bar.n}/{progress_bar.total} Iterations Completed')
         if iterations % iter_batch == 0:
             update_model(training_data, past, g)
+            update_running(iterations, len(counters))
             training_data = []
             progress_bar = tqdm.tqdm(initial=iterations, total=iterations+iter_batch, leave=False)
-        
+    update_model(training_data, past, g)
+    update_running(iterations, len(counters))
     progress_bar.close()
     print("Total Iterations", iterations)
-    # TODO Output PAST to file
-    # with open(PAST_path, 'wb') as f:
-    #     pickle.dump(PAST, f)
 
     return iterations
 
 
 def main():
     if LOAD_MODEL:
-        MODEL_ID = "RAM-HEUR-37"
-        RUN_ID = "RAM-46"
+        MODEL_ID = "RAM-HEUR-83"
+        RUN_ID = "RAM-92"
+        print(f"Loading {MODEL_ID} and {RUN_ID}.")
         run, model_version, model = load_model_by_id(project=PROJECT,
                                 model_name=MODEL_NAME,
                                 model_id=MODEL_ID,
@@ -175,7 +166,7 @@ def main():
         if PARAMS['pretrain']:
             TRAIN_PATH = 'data/csv/scaled/'
             # CSV_LIST = ['all_leq9','ramsey_3_4','ramsey_3_5','ramsey_3_6','ramsey_3_7','ramsey_3_9','ramsey_4_4']
-            CSV_LIST = ['all_leq9']
+            CSV_LIST = ['all_leq6']
             TRAIN_CSV_LIST = [f'{TRAIN_PATH}{CSV}.csv' for CSV in CSV_LIST]
             train_X, train_y = train.split_X_y_list(TRAIN_CSV_LIST)
             print(f"Pretraining on {train_X.shape[0]} samples.")
@@ -203,7 +194,7 @@ def main():
     if HEURISTIC_TYPE == "RANDOM":
         def update_model(*args, **kwargs):
             pass
-        PAST, G = dict(), ig.Graph.GRG(N, N/2/(N-1))
+        PAST, COUNTERS, G = dict(), [], ig.Graph.GRG(N, N/2/(N-1))
     else:
         neptune_cbk = hn.get_neptune_cbk(run)
         def save_past_and_g(past, g):
@@ -211,11 +202,11 @@ def main():
                 with open('past.pkl','wb') as file:
                     pickle.dump(past, file)
                 run['running/PAST'].upload('past.pkl')
-
-                nx_graph = nx.Graph(g.get_edgelist())
-                nx.write_graph6(nx_graph, 'G.g6', header=False)
-                run['running/G'].upload('G.g6')
-        def load_past_and_g():
+                if g is not None:
+                    nx_graph = nx.Graph(g.get_edgelist())
+                    nx.write_graph6(nx_graph, 'G.g6', header=False)
+                    run['running/G'].upload('G.g6')
+        def load_data():
             run['running/PAST'].download('past.pkl')
             with open('past.pkl', 'rb') as file:
                 past = pickle.load(file)
@@ -223,58 +214,56 @@ def main():
             run['running/G'].download('G.g6')
             g = ig.Graph.from_networkx(nx.read_graph6('G.g6'))
 
-            return past, g
+            run['running/counters'].download('counters.g6')
+            counters = nx.read_graph6('counters.g6')
+            counters = [counters] if type(counters) != list else counters
+            
+            oldIterations = run['running/iterations'].fetch_last()
+            timeOffset = run['running/time'].fetch_last()
+            return past, counters, g, oldIterations, timeOffset
         if LOAD_MODEL:
-            PAST, G = load_past_and_g()
+            PAST, COUNTERS, G, oldIterations, timeOffset = load_data()
         else:
-            PAST, G = dict(), ig.Graph.GRG(N, N/2/(N-1))
+            PAST = dict()
+            COUNTERS = []
+            G = ig.Graph.GRG(N, N/2/(N-1))
+            oldIterations = 0
+            timeOffset = 0
         def update_model(training_data, past, g):
             X = np.array([list(vec.values())[:-1] for vec in training_data])
             y = np.array([list(vec.values())[-1] for vec in training_data])
             model.fit(X, y, epochs=PARAMS['epochs'], batch_size=PARAMS['batch_size'], callbacks=[neptune_cbk], verbose=1)
             train.save_trained_model(model_version, model)  
             save_past_and_g(past, g)
-    n = N
-    s = S
-    t = T
-    run['running/N'] = n
-    run['running/S'] = s
-    run['running/T'] = t
-    ITER_BATCH = 200
+    
+    run['running/N'] = N
+    run['running/S'] = S
+    run['running/T'] = T
+    ITER_BATCH = 100
     counter_path = f'data/found_counters/scaled_dnn'
-    write_path = f"{counter_path}/r{s}_{t}_{n}_graph.g6"
-    unique_path = f'{counter_path}/r{s}_{t}_{n}_isograph.g6'
-    if os.path.exists(write_path):
-        os.remove(write_path)
+    unique_path = f'{counter_path}/r{S}_{T}_{N}_isograph.g6'
     if os.path.exists(unique_path):
         os.remove(unique_path)
     PARALLEL = False
     startTime = timeit.default_timer()
-    iterations = bfs(G, write_path, PAST, s, t, PARALLEL, ITER_BATCH, update_model, heuristic, run, model_version)
+    def update_run_data(unique_path, startTime):
+        def update_running(iterations, counter_count):
+            if os.path.exists(unique_path):
+                run['running/counters'].upload(unique_path)
+            run['running/counter_count'].append(counter_count)
+            run['running/time'].append(timeit.default_timer() - startTime + timeOffset)
+            run['running/iterations'].append(iterations)
+        return update_running
+    update_running = update_run_data(unique_path, startTime)
+    bfs(G, unique_path, PAST, COUNTERS, S, T, N, PARALLEL, ITER_BATCH, update_model, heuristic, update_running, oldIterations)
     print(f"Single Threaded Time Elapsed: {timeit.default_timer() - startTime}")
     # startTime = timeit.default_timer()
     # G2 = ig.Graph(7)
     # bfs(G2, g6path_to_write_to, gEdgePath_to_write_to, PAST_path, s, t, True)
-    # print(f"Multi Threaded Time Elapsed: {timeit.default_timer() - startTime}")
-    if os.path.exists(write_path):
-        isoStartTime = timeit.default_timer()
-        counters_found = get_unique_graphs(read_path=write_path,
-                            write_path=unique_path)
-        print(f"Iso Updater Time Elapsed: {timeit.default_timer() - isoStartTime}")
-        run['running/counter_count'] = counters_found
-        run['running/counters'].upload(unique_path)
-        run['running/redundant_counters'].upload(write_path)
-    else:
-        run['running/counter_count'] = 0
-    run['running/time'] = timeit.default_timer() - startTime
-    run['running/iterations'] = iterations
-    
+    # print(f"Multi Threaded Time Elapsed: {timeit.default_timer() - startTime}")    
     run.stop()
     model_version.stop()
 
 
 if __name__ == '__main__':
     main()
-
-# TODO if we want this pausing scheme, we need to also store all metadata along with PAST_path to resume which adds overhead
-# // point of storing PAST_path is we can run for a certain amount of steps max if needed, store last G visited as g6, load up G and PAST and start from where we left off. Note: if doing this, make sure G was last thing vectorized, and not G's derived from G.
