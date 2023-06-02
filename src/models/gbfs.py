@@ -27,10 +27,10 @@ MODEL_NAME = "RAM-HEUR"
 LOAD_MODEL = False
 # Choose from RANDOM, DNN, SCALED_DNN
 HEURISTIC_TYPE = "SCALED_DNN"
-PARAMS = {'epochs': 1, 'batch_size':32, 'optimizer':'adam', 'loss':tf.keras.losses.BinaryCrossentropy(from_logits=False, label_smoothing=0.2),'last_activation':'sigmoid','pretrain':True}
-N = 8
+PARAMS = {'training_epochs': 5, 'epochs': 1, 'batch_size':32, 'optimizer':'adam', 'loss':tf.keras.losses.BinaryCrossentropy(from_logits=False, label_smoothing=0.2),'last_activation':'sigmoid','pretrain':True}
+N = 10
 S = 3
-T = 4
+T = 5
 
 # TODO: Update parallel threaded processes 
 def process_edge(e, G, PAST, used_edges, subgraph_counts, s, t, g6path_to_write_to, gEdgePath_to_write_to, path, heuristic):
@@ -175,13 +175,12 @@ def main():
         if PARAMS['pretrain']:
             TRAIN_PATH = 'data/csv/scaled/'
             # CSV_LIST = ['all_leq9','ramsey_3_4','ramsey_3_5','ramsey_3_6','ramsey_3_7','ramsey_3_9','ramsey_4_4']
-            CSV_LIST = ['all_leq6']
+            CSV_LIST = ['all_leq9']
             TRAIN_CSV_LIST = [f'{TRAIN_PATH}{CSV}.csv' for CSV in CSV_LIST]
             train_X, train_y = train.split_X_y_list(TRAIN_CSV_LIST)
             print(f"Pretraining on {train_X.shape[0]} samples.")
             neptune_cbk = hn.get_neptune_cbk(run=run)
             train.train(model=model, train_X=train_X, train_y=train_y, params=PARAMS, neptune_cbk=neptune_cbk)
-            print(f"Pretrained on {train_X.shape[0]} samples.")
         train.save_trained_model(model_version=model_version, model=model)
             
 

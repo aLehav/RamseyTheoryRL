@@ -48,7 +48,7 @@ def train(model: keras.Sequential,
 
     model.fit(train_X, 
             train_y, 
-            epochs=params['epochs'], 
+            epochs=params['training_epochs'], 
             batch_size=params['batch_size'],
             callbacks=[neptune_cbk],
             class_weight=class_weights,
