@@ -28,7 +28,7 @@ LOAD_MODEL = True
 # Choose from RANDOM, DNN, SCALED_DNN
 HEURISTIC_TYPE = "SCALED_DNN"
 PARAMS = {'training_epochs': 1, 'epochs': 1, 'batch_size':32, 'optimizer':'adam', 'loss':tf.keras.losses.BinaryCrossentropy(from_logits=False, label_smoothing=0.2),'last_activation':'sigmoid','pretrain':True, 'heuristic_type':HEURISTIC_TYPE}
-N = 9
+N = 11
 S = 3
 T = 5
 
@@ -114,7 +114,7 @@ def step(g, past, edges, s, t, unique_path, subgraph_counts, training_data: list
 
 # Assume we are only adding edges
 
-def bfs(g, unique_path, past, counters, s, t, n, PARALLEL, iter_batch, update_model, heuristic, update_running, oldIterations=0):
+def bfs(g, unique_path, past, counters, s, t, n, parallel, iter_batch, update_model, heuristic, update_running, oldIterations=0, batches=None):
     # we consider all edges
     edges = [(i, j) for i in range(n)
              for j in range(i+1, n)]
@@ -125,7 +125,7 @@ def bfs(g, unique_path, past, counters, s, t, n, PARALLEL, iter_batch, update_mo
     iterations = oldIterations
     progress_bar = tqdm.tqdm(initial=iterations, total=iterations+iter_batch, leave=False)
     while g is not None:
-        if (PARALLEL):
+        if (parallel):
             # TODO Update to match step functionality
             g = step_par(g, past, dict(), edges, s, t, unique_path, subgraph_counts)
         else:
@@ -135,6 +135,9 @@ def bfs(g, unique_path, past, counters, s, t, n, PARALLEL, iter_batch, update_mo
         progress_bar.update(1)
         progress_bar.set_postfix(iterations=f'{progress_bar.n}/{progress_bar.total} Iterations Completed')
         if iterations % iter_batch == 0:
+            if batches is not None:
+                if iterations / iter_batch == batches: 
+                    break
             update_model(training_data, past, g)
             update_running(iterations, len(counters))
             training_data = []
@@ -149,8 +152,8 @@ def bfs(g, unique_path, past, counters, s, t, n, PARALLEL, iter_batch, update_mo
 
 def main():
     if LOAD_MODEL:
-        MODEL_ID = "RAM-HEUR-83"
-        RUN_ID = "RAM-92"
+        MODEL_ID = "RAM-HEUR-85"
+        RUN_ID = "RAM-94"
         print(f"Loading {MODEL_ID} and {RUN_ID}.")
         run, model_version, model = load_model_by_id(project=PROJECT,
                                 model_name=MODEL_NAME,
@@ -166,7 +169,7 @@ def main():
         if PARAMS['pretrain']:
             TRAIN_PATH = 'data/csv/scaled/'
             # CSV_LIST = ['all_leq9','ramsey_3_4','ramsey_3_5','ramsey_3_6','ramsey_3_7','ramsey_3_9','ramsey_4_4']
-            CSV_LIST = ['all_leq6']
+            CSV_LIST = ['all_leq6','ramsey_3_4']
             TRAIN_CSV_LIST = [f'{TRAIN_PATH}{CSV}.csv' for CSV in CSV_LIST]
             train_X, train_y = train.split_X_y_list(TRAIN_CSV_LIST)
             print(f"Pretraining on {train_X.shape[0]} samples.")
@@ -214,9 +217,12 @@ def main():
             run['running/G'].download('G.g6')
             g = ig.Graph.from_networkx(nx.read_graph6('G.g6'))
 
-            run['running/counters'].download('counters.g6')
-            counters = nx.read_graph6('counters.g6')
-            counters = [counters] if type(counters) != list else counters
+            if run.exists('running/counters'):
+                run['running/counters'].download('counters.g6')
+                counters = nx.read_graph6('counters.g6')
+                counters = [counters] if type(counters) != list else counters
+            else:
+                counters = []
             
             oldIterations = run['running/iterations'].fetch_last()
             timeOffset = run['running/time'].fetch_last()
@@ -240,6 +246,8 @@ def main():
     run['running/S'] = S
     run['running/T'] = T
     ITER_BATCH = 100
+    # BATCHES = 5
+    BATCHES = None
     counter_path = f'data/found_counters/scaled_dnn'
     unique_path = f'{counter_path}/r{S}_{T}_{N}_isograph.g6'
     if os.path.exists(unique_path):
@@ -255,7 +263,7 @@ def main():
             run['running/iterations'].append(iterations)
         return update_running
     update_running = update_run_data(unique_path, startTime)
-    bfs(G, unique_path, PAST, COUNTERS, S, T, N, PARALLEL, ITER_BATCH, update_model, heuristic, update_running, oldIterations)
+    bfs(g=G, unique_path=unique_path, past=PAST, counters=COUNTERS, s=S, t=T, n=N, parallel=PARALLEL, iter_batch=ITER_BATCH, update_model=update_model, heuristic=heuristic, update_running=update_running, oldIterations=oldIterations, batches=BATCHES)
     print(f"Single Threaded Time Elapsed: {timeit.default_timer() - startTime}")
     # startTime = timeit.default_timer()
     # G2 = ig.Graph(7)
