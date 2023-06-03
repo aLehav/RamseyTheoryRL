@@ -22,15 +22,15 @@ import utils.heuristic.handle_neptune as hn
 import utils.heuristic.create_heuristic as ch
 from models.heuristic import load_model_by_id
 
-PROJECT = "alehav/RamseyRL"
+PROJECT = "rinzzier/RamseyRL"
 MODEL_NAME = "RAM-HEUR"
-LOAD_MODEL = True
+LOAD_MODEL = False
 # Choose from RANDOM, DNN, SCALED_DNN
 HEURISTIC_TYPE = "SCALED_DNN"
 PARAMS = {'training_epochs': 1, 'epochs': 1, 'batch_size':32, 'optimizer':'adam', 'loss':tf.keras.losses.BinaryCrossentropy(from_logits=False, label_smoothing=0.2),'last_activation':'sigmoid','pretrain':True, 'heuristic_type':HEURISTIC_TYPE}
-N = 11
+N = 8
 S = 3
-T = 5
+T = 4
 
 # TODO: Update parallel threaded processes 
 def process_edge(e, G, PAST, used_edges, subgraph_counts, s, t, g6path_to_write_to, gEdgePath_to_write_to, path, heuristic):
@@ -39,14 +39,14 @@ def process_edge(e, G, PAST, used_edges, subgraph_counts, s, t, g6path_to_write_
       return None
     # Obtain new vectorization
     # G_prime = G.copy()
-    new_subgraph_counts = update_feature_from_edge(G, e[0], e[1], subgraph_counts)
-    is_counterexample = check_counterexample(G, s, t)
+    new_subgraph_counts = update_feature_from_edge_parBfs(G, e[0], e[1], subgraph_counts)
+    is_counterexample = check_counterexample_parBfs(G, s, t, e)
 
     # output to file
     if (is_counterexample):
        consider_counterexample(G=G, g6path_to_write_to=g6path_to_write_to, gEdgePath_to_write_to=gEdgePath_to_write_to, e=e, path=path)
     # Change back edited edge
-    change_edge(G, e)
+    # change_edge(G, e)
 
     vectorization = {**new_subgraph_counts, 'n': G.vcount(),
                       's': s, 't': t, 'counter': is_counterexample}
