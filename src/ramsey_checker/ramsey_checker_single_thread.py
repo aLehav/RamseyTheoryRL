@@ -41,12 +41,12 @@ class RamseyCheckerSingleThread(RamseyChecker):
                 file.write(nx.to_graph6_bytes(
                     nx_graph, header=False).decode('ascii'))
 
-    def count_subgraphs_from_edge(cls, self, G, u, v):
-        counters = {name: 0 for name in cls.structures}
+    def count_subgraphs_from_edge(self, G, u, v):
+        counters = {name: 0 for name in self.structures}
         nodes = set(range(G.vcount())) - {u, v}
         for node1, node2 in itertools.combinations(nodes, 2):
             subgraph = G.subgraph([u, v, node1, node2])
-            for name, structure in cls.structures.items():
+            for name, structure in self.structures.items():
                 if subgraph.isomorphic(structure):
                     counters[name] += 1
         return counters
@@ -100,23 +100,18 @@ class RamseyCheckerSingleThread(RamseyChecker):
 
         return g
 
-    def bfs(cls, self, g, unique_path, past, counters, s, t, n, iter_batch, update_model, heuristic, update_running, oldIterations=0, batches=None):
+    def bfs(self, g, unique_path, past, counters, s, t, n, iter_batch, update_model, heuristic, update_running, oldIterations=0, batches=None):
         # we consider all edges
         edges = [(i, j) for i in range(n)
                  for j in range(i+1, n)]
 
         # Will store a list of vectors either expanded or found to be counterexamples, and upate a model after a given set of iterations
         training_data = []
-        subgraph_counts = cls.count_subgraph_structures(g)
+        subgraph_counts = self.count_subgraph_structures(g)
         iterations = oldIterations
         progress_bar = tqdm.tqdm(
             initial=iterations, total=iterations+iter_batch, leave=False)
         while g is not None:
-            # if (parallel):
-            #     # TODO Update to match step functionality
-            #     g = step_par(g, past, dict(), edges, s, t,
-            #                  unique_path, subgraph_counts)
-            # else:
             g = self.step(g, past, edges, s, t, unique_path,
                     subgraph_counts, training_data, counters, heuristic)
 

@@ -57,8 +57,8 @@ class RamseyCheckerMultiThread(RamseyChecker):
                 file.write(nx.to_graph6_bytes(
                     nx_graph, header=False).decode('ascii'))
 
-    def count_subgraphs_from_edge(cls, self, G, u, v, to_change):
-        counters = {name: 0 for name in cls.structures}
+    def count_subgraphs_from_edge(self, G, u, v, to_change):
+        counters = {name: 0 for name in self.structures}
         nodes = set(range(G.vcount())) - {u, v}
         for node1, node2 in itertools.combinations(nodes, 2):
             subgraph = G.subgraph([u, v, node1, node2])
@@ -67,7 +67,7 @@ class RamseyCheckerMultiThread(RamseyChecker):
                   subgraph.delete_edges([(u, v)])
               else:
                   subgraph.add_edge(u, v)
-            for name, structure in cls.structures.items():
+            for name, structure in self.structures.items():
                 if subgraph.isomorphic(structure):
                     counters[name] += 1
         return counters
@@ -83,7 +83,7 @@ class RamseyCheckerMultiThread(RamseyChecker):
                 (new_count[name] - old_count[name])
         return new_counters
 
-    def process_edge(self, e, G, PAST, used_edges, subgraph_counts, s, t, g6path_to_write_to, gEdgePath_to_write_to, path, heuristic):
+    def process_edge(self, e, G, PAST, used_edges, subgraph_counts, s, t, unique_path, heuristic):
         check = str(e[0]) + ',' + str(e[1])
         if (check in used_edges.keys()):
           return None
@@ -95,8 +95,7 @@ class RamseyCheckerMultiThread(RamseyChecker):
 
         # output to file
         if (is_counterexample):
-          self.consider_counterexample(G=G, g6path_to_write_to=g6path_to_write_to,
-                                  gEdgePath_to_write_to=gEdgePath_to_write_to, e=e, path=path)
+          self.consider_counterexample(G=G, counter_path=unique_path, e=e)
         # Change back edited edge
         # change_edge(G, e)
 
@@ -109,10 +108,10 @@ class RamseyCheckerMultiThread(RamseyChecker):
             return (heuristic_val, e, new_subgraph_counts, vectorization_string)
             new_graphs.append((heuristic_val, e, G_prime))
 
-    def step_par(self, G, PAST, used_edges, edges, s, t, g6path_to_write_to, gEdgePath_to_write_to, subgraph_counts, path, heuristic):
+    def step_par(self, G, PAST, used_edges, edges, s, t, unique_path, subgraph_counts, heuristic):
         new_edges = []
         process_edge_wrapper = partial(self.process_edge, G=G.copy(), PAST=PAST, used_edges=used_edges, subgraph_counts=subgraph_counts,
-                                      s=s, t=t,  g6path_to_write_to=g6path_to_write_to,  gEdgePath_to_write_to=gEdgePath_to_write_to, path=path)
+                                      s=s, t=t,  unique_path=unique_path, heuristic=heuristic)
 
         with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
             new_graphs = pool.map(process_edge_wrapper, edges)
@@ -123,7 +122,6 @@ class RamseyCheckerMultiThread(RamseyChecker):
 
         new_graphs.sort(key=lambda x: x[0], reverse=True)  # sort by heuristic
         best_edge = (new_graphs[0][1][0], new_graphs[0][1][1])  # best edge
-        path.append(best_edge)
         check = str(best_edge[0]) + ',' + str(best_edge[1])
         used_edges[check] = 1
         self.change_edge(G, best_edge)
@@ -131,7 +129,7 @@ class RamseyCheckerMultiThread(RamseyChecker):
         PAST[new_graphs[0][3]] = new_graphs[0][0]
         return G
 
-    def bfs(self, g, unique_path, past, counters, s, t, n, parallel, iter_batch, update_model, heuristic, update_running, oldIterations=0, batches=None):
+    def bfs(self, g, unique_path, past, counters, s, t, n, iter_batch, update_model, heuristic, update_running, oldIterations=0, batches=None):
         # we consider all edges
         edges = [(i, j) for i in range(n)
                 for j in range(i+1, n)]
@@ -143,12 +141,8 @@ class RamseyCheckerMultiThread(RamseyChecker):
         progress_bar = tqdm.tqdm(
             initial=iterations, total=iterations+iter_batch, leave=False)
         while g is not None:
-            # if (parallel):
             g = self.step_par(g, past, dict(), edges, s, t,
-                        unique_path, subgraph_counts)
-            # else:
-            #     g = step(g, past, edges, s, t, unique_path,
-            #             subgraph_counts, training_data, counters, heuristic)
+                        unique_path, subgraph_counts, training_data, heuristic)
 
             iterations += 1
             progress_bar.update(1)
