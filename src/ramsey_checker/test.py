@@ -5,8 +5,6 @@ import networkx as nx
 import random
 import timeit
 import pickle
-from functools import partial
-from neptune.integrations.tensorflow_keras import NeptuneCallback
 import math
 import pickle
 import sys
