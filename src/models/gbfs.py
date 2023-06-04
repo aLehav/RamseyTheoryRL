@@ -32,53 +32,6 @@ N = 8
 S = 3
 T = 4
 
-# TODO: Update parallel threaded processes 
-def process_edge(e, G, PAST, used_edges, subgraph_counts, s, t, g6path_to_write_to, gEdgePath_to_write_to, path, heuristic):
-    check = str(e[0]) + ',' + str(e[1])
-    if (check in used_edges.keys()):
-      return None
-    # Obtain new vectorization
-    # G_prime = G.copy()
-    new_subgraph_counts = update_feature_from_edge_parBfs(G, e[0], e[1], subgraph_counts)
-    is_counterexample = check_counterexample_parBfs(G, s, t, e)
-
-    # output to file
-    if (is_counterexample):
-       consider_counterexample(G=G, g6path_to_write_to=g6path_to_write_to, gEdgePath_to_write_to=gEdgePath_to_write_to, e=e, path=path)
-    # Change back edited edge
-    # change_edge(G, e)
-
-    vectorization = {**new_subgraph_counts, 'n': G.vcount(),
-                      's': s, 't': t, 'counter': is_counterexample}
-    vectorization_string = str(vectorization)
-    # Assume keys in PAST are strings
-    if vectorization_string not in PAST.keys():
-        heuristic_val = heuristic(vectorization)
-        return (heuristic_val, e, new_subgraph_counts, vectorization_string)
-        new_graphs.append((heuristic_val, e, G_prime))
-
-# We are assuming python atomic list operations are thread-safe
-def step_par(G, PAST, used_edges, edges, s, t, g6path_to_write_to, gEdgePath_to_write_to, subgraph_counts, path, heuristic):
-    new_edges = []
-    process_edge_wrapper = partial(process_edge, G=G.copy(), PAST=PAST, used_edges=used_edges, subgraph_counts=subgraph_counts, s=s, t=t,  g6path_to_write_to=g6path_to_write_to,  gEdgePath_to_write_to=gEdgePath_to_write_to, path=path)
-
-    with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
-        new_graphs = pool.map(process_edge_wrapper, edges)
-
-    new_graphs = [x for x in new_graphs if x is not None]
-    if not new_graphs:
-        return None
-    
-    new_graphs.sort(key=lambda x: x[0], reverse=True)  # sort by heuristic
-    best_edge = (new_graphs[0][1][0], new_graphs[0][1][1]) # best edge
-    path.append(best_edge)
-    check = str(best_edge[0]) + ',' + str(best_edge[1])
-    used_edges[check] = 1
-    change_edge(G,best_edge)
-    subgraph_counts.update(new_graphs[0][2])
-    PAST[new_graphs[0][3]] = new_graphs[0][0]
-    return G
-
 
 def step(g, past, edges, s, t, unique_path, subgraph_counts, training_data: list, counters: list, heuristic):
     new_graphs = []
@@ -112,7 +65,7 @@ def step(g, past, edges, s, t, unique_path, subgraph_counts, training_data: list
 
     return g
 
-def bfs(g, unique_path, past, counters, s, t, n, parallel, iter_batch, update_model, heuristic, update_running, oldIterations=0, batches=None):
+def bfs(g, unique_path, past, counters, s, t, n, iter_batch, update_model, heuristic, update_running, oldIterations=0, batches=None):
     # we consider all edges
     edges = [(i, j) for i in range(n)
              for j in range(i+1, n)]
@@ -123,11 +76,7 @@ def bfs(g, unique_path, past, counters, s, t, n, parallel, iter_batch, update_mo
     iterations = oldIterations
     progress_bar = tqdm.tqdm(initial=iterations, total=iterations+iter_batch, leave=False)
     while g is not None:
-        if (parallel):
-            # TODO Update to match step functionality
-            g = step_par(g, past, dict(), edges, s, t, unique_path, subgraph_counts)
-        else:
-            g = step(g, past, edges, s, t, unique_path, subgraph_counts, training_data, counters, heuristic)
+        g = step(g, past, edges, s, t, unique_path, subgraph_counts, training_data, counters, heuristic)
 
         iterations += 1
         progress_bar.update(1)

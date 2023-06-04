@@ -19,6 +19,8 @@ import utils.heuristic.create_heuristic as ch
 from models.heuristic import load_model_by_id
 from ramsey_checker_single_thread import RamseyCheckerSingleThread
 from ramsey_checker_multi_thread import RamseyCheckerMultiThread
+import threading
+import cProfile, pstats
 
 PROJECT = "rinzzier/RamseyRL"
 MODEL_NAME = "RAM-HEUR"
@@ -30,6 +32,7 @@ PARAMS = {'training_epochs': 1, 'epochs': 1, 'batch_size': 32, 'optimizer': 'ada
 N = 8
 S = 3
 T = 4
+lock = threading.Lock()
 
 
 def main():
@@ -66,18 +69,19 @@ def main():
             return random.random()
     elif HEURISTIC_TYPE == "DNN":
         def heuristic(vectorizations):
-            X = np.array([list(vec.values())[:-1] for vec in vectorizations])
-            predictions = model.predict(X, verbose=0)
-            return [prediction[0] for prediction in predictions]
+            with lock:
+                X = np.array([list(vec.values())[:-1] for vec in vectorizations])
+                predictions = model.predict(X, verbose=0)
+                return [prediction[0] for prediction in predictions]
     elif HEURISTIC_TYPE == "SCALED_DNN":
         scaler = float(math.comb(N, 4))
-
         def heuristic(vectorizations):
-            X = np.array([list(vec.values())[:-1]
-                         for vec in vectorizations]).astype(float)
-            X[:11] /= scaler
-            predictions = model.predict(X, verbose=0)
-            return [prediction[0] for prediction in predictions]
+            with lock:
+                X = np.array([list(vec.values())[:-1]
+                            for vec in vectorizations]).astype(float)
+                X[:11] /= scaler
+                predictions = model.predict(X, verbose=0)
+                return [prediction[0] for prediction in predictions]
 
     if HEURISTIC_TYPE == "RANDOM":
         def update_model(*args, **kwargs):
@@ -153,8 +157,11 @@ def main():
             run['running/iterations'].append(iterations)
         return update_running
     update_running = update_run_data(unique_path, startTime)
-    ramseyChecker.bfs(g=G, unique_path=unique_path, past=PAST, counters=COUNTERS, s=S, t=T, n=N, iter_batch=ITER_BATCH,
-        update_model=update_model, heuristic=heuristic, update_running=update_running, oldIterations=oldIterations, batches=BATCHES)
+    with cProfile.Profile() as profiler:
+        ramseyChecker.bfs(g=G, unique_path=unique_path, past=PAST, counters=COUNTERS, s=S, t=T, n=N, iter_batch=ITER_BATCH,
+            update_model=update_model, heuristic=heuristic, update_running=update_running, oldIterations=oldIterations, batches=BATCHES)
+    stats = pstats.Stats(profiler)
+    stats.sort_stats(pstats.SortKey.TIME).print_stats()
     print(
         f"Single Threaded Time Elapsed: {timeit.default_timer() - startTime}")
     # startTime = timeit.default_timer()
