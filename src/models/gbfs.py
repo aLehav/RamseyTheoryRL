@@ -26,7 +26,7 @@ PROJECT = "rinzzier/RamseyRL"
 MODEL_NAME = "RAM-HEUR"
 LOAD_MODEL = False
 # Choose from RANDOM, DNN, SCALED_DNN
-HEURISTIC_TYPE = "SCALED_DNN"
+HEURISTIC_TYPE = "RANDOM"
 PARAMS = {'training_epochs': 1, 'epochs': 1, 'batch_size':32, 'optimizer':'adam', 'loss':tf.keras.losses.BinaryCrossentropy(from_logits=False, label_smoothing=0.2),'last_activation':'sigmoid','pretrain':True, 'heuristic_type':HEURISTIC_TYPE}
 N = 8
 S = 3
@@ -163,22 +163,23 @@ def main():
                                             model_name=MODEL_NAME)
         MODEL_ID = model_version["sys/id"].fetch()
         RUN_ID = run["sys/id"].fetch()
-        model = ch.create_model(PARAMS)
-        if PARAMS['pretrain']:
-            TRAIN_PATH = 'data/csv/scaled/'
-            # CSV_LIST = ['all_leq9','ramsey_3_4','ramsey_3_5','ramsey_3_6','ramsey_3_7','ramsey_3_9','ramsey_4_4']
-            CSV_LIST = ['all_leq6','ramsey_3_4']
-            TRAIN_CSV_LIST = [f'{TRAIN_PATH}{CSV}.csv' for CSV in CSV_LIST]
-            train_X, train_y = train.split_X_y_list(TRAIN_CSV_LIST)
-            print(f"Pretraining on {train_X.shape[0]} samples.")
-            neptune_cbk = hn.get_neptune_cbk(run=run)
-            train.train(model=model, train_X=train_X, train_y=train_y, params=PARAMS, neptune_cbk=neptune_cbk)
-        train.save_trained_model(model_version=model_version, model=model)
+        if HEURISTIC_TYPE == "SCALED_DNN" or HEURISTIC_TYPE == 'DNN':
+            model = ch.create_model(PARAMS)
+            if PARAMS['pretrain']:
+                TRAIN_PATH = 'data/csv/scaled/'
+                # CSV_LIST = ['all_leq9','ramsey_3_4','ramsey_3_5','ramsey_3_6','ramsey_3_7','ramsey_3_9','ramsey_4_4']
+                CSV_LIST = ['all_leq6','ramsey_3_4']
+                TRAIN_CSV_LIST = [f'{TRAIN_PATH}{CSV}.csv' for CSV in CSV_LIST]
+                train_X, train_y = train.split_X_y_list(TRAIN_CSV_LIST)
+                print(f"Pretraining on {train_X.shape[0]} samples.")
+                neptune_cbk = hn.get_neptune_cbk(run=run)
+                train.train(model=model, train_X=train_X, train_y=train_y, params=PARAMS, neptune_cbk=neptune_cbk)
+            train.save_trained_model(model_version=model_version, model=model)
             
 
     if HEURISTIC_TYPE == "RANDOM":
         def heuristic(vectorizations):
-            return random.random()
+            return [random.random() for vec in vectorizations]
     elif HEURISTIC_TYPE == "DNN":
         def heuristic(vectorizations):
             X = np.array([list(vec.values())[:-1] for vec in vectorizations])
@@ -192,13 +193,7 @@ def main():
             predictions = model.predict(X, verbose=0)
             return [prediction[0] for prediction in predictions]
 
-    if HEURISTIC_TYPE == "RANDOM":
-        def update_model(*args, **kwargs):
-            pass
-        PAST, COUNTERS, G = dict(), [], ig.Graph.GRG(N, N/2/(N-1))
-    else:
-        neptune_cbk = hn.get_neptune_cbk(run)
-        def save_past_and_g(past, g):
+    def save_past_and_g(past, g):
                 np.save
                 with open('past.pkl','wb') as file:
                     pickle.dump(past, file)
@@ -207,6 +202,17 @@ def main():
                     nx_graph = nx.Graph(g.get_edgelist())
                     nx.write_graph6(nx_graph, 'G.g6', header=False)
                     run['running/G'].upload('G.g6')
+
+    if HEURISTIC_TYPE == "RANDOM":
+        def update_model(training_data, past, g):
+            save_past_and_g(past, g)
+        PAST = dict()
+        COUNTERS = []
+        G = ig.Graph.GRG(N, N/2/(N-1))
+        oldIterations = 0
+        timeOffset = 0
+    else:
+        neptune_cbk = hn.get_neptune_cbk(run)
         def load_data():
             run['running/PAST'].download('past.pkl')
             with open('past.pkl', 'rb') as file:
