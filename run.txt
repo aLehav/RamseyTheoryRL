@@ -1,1 +1,1 @@
-1..3 | ForEach-Object { & 'C:\Users\adaml\anaconda3\envs\ramsey_env\python.exe' 'c:\Users\adaml\OneDrive\SC Files\RamseyTheoryRL\src\models\gbfs.py' }
+1..20 | ForEach-Object { & 'C:\Users\adaml\anaconda3\envs\ramsey_env\python.exe' 'c:\Users\adaml\OneDrive\SC Files\RamseyTheoryRL\src\models\gbfs.py' }

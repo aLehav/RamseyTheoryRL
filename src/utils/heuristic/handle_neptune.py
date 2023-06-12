@@ -19,6 +19,7 @@ def init_neptune(params, project, model_name):
     run = neptune.init_run(project=project, api_token=api_token)
     model_version = neptune.init_model_version(model=model_name, project=project, api_token=api_token)
     run['parameters'] = stringify_unsupported(params)
+    model_version['parameters'] = stringify_unsupported(params)
     return run, model_version
 
 def load_neptune(project, model_name, model_id, run_id):

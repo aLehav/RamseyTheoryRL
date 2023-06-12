@@ -22,11 +22,11 @@ import utils.heuristic.handle_neptune as hn
 import utils.heuristic.create_heuristic as ch
 from models.heuristic import load_model_by_id
 
-PROJECT = "rinzzier/RamseyRL"
+PROJECT = f"{os.environ.get('NEPTUNE_NAME')}/RamseyRL"
 MODEL_NAME = "RAM-HEUR"
 LOAD_MODEL = False
 # Choose from RANDOM, 4PATH, DNN, SCALED_DNN
-HEURISTIC_TYPE = "4PATH"
+HEURISTIC_TYPE = "RANDOM"
 # Steps to take before updating model data / weights
 ITER_BATCH = 200 
 PARAMS = {'heuristic_type':HEURISTIC_TYPE, 'iter_batch':ITER_BATCH}
