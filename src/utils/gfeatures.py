@@ -9,9 +9,6 @@ parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(parent_dir)
 from utils.guseful import *
 
-
-node_list = [nodes for nodes in itertools.combinations(range(35), 4)]
-max_workers = os.cpu_count()
 # Since structures is read only, global initialization is fine
 structures = {
     "K_{1,3}": ig.Graph.Full_Bipartite(1, 3),
@@ -87,61 +84,30 @@ def update_feature_from_edge(G, u, v, counters):
         new_counters[name] = counters[name] + (new_count[name] - old_count[name])
     return new_counters
 
-
-def process_subgraph(G, nodes, structures):
-    counters = {name: 0 for name in structures}
-    subgraph = G.subgraph(nodes)
-    for name, structure in structures.items():
-        if subgraph.isomorphic(structure):
-            counters[name] += 1
-    return counters
-
-def process_subgraph_par(nodes):
-  # print(nodes)
-  return nodes
-
-# apple silicon does not support hyperthreading, so we have at most os.cpu_count()=8 processes
-def count_subgraph_structures_parallel(G):
-    counters = {name: 0 for name in structures}
-
-    # This is the function that will be submitted to the executor
-    # def process_subgraph(nodes):
-    #     subgraph = G.subgraph(nodes)
-    #     local_counters = {name: 0 for name in structures}
-    #     for name, structure in structures.items():
-    #         if subgraph.isomorphic(structure):
-    #             local_counters[name] += 1
-    #     return local_counters
-
-    with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
-      results = pool.map(process_subgraph_par, node_list)
-    
-    return counters
-
-
-    # with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
-    #     future_to_nodes = {executor.submit(
-    #         process_subgraph, i): i for i in range(n/max_workers)}
-    #     print(future_to_nodes)
-    #     for future in concurrent.futures.as_completed(future_to_nodes):
-    #         nodes = future_to_nodes[future]
-    #         try:
-    #             local_counters = future.result()
-    #             for name in local_counters:
-    #                 counters[name] += local_counters[name]
-    #         except Exception as exc:
-    #             print('Generated an exception: %s' % (exc))
-    # return counters
-
-
-def count_subgraphs_from_edge_parallel(G, u, v):
+# Par
+def count_subgraphs_from_edge_parBfs(G, u, v, to_change):
     counters = {name: 0 for name in structures}
     nodes = set(range(G.vcount())) - {u, v}
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        futures = [executor.submit(process_subgraph, G, [u, v, node1, node2], structures)
-                   for node1, node2 in itertools.combinations(nodes, 2)]
-        for future in concurrent.futures.as_completed(futures):
-            result = future.result()
-            for name in result:
-                counters[name] += result[name]
+    for node1, node2 in itertools.combinations(nodes, 2):
+        subgraph = G.subgraph([u, v, node1, node2])
+        if to_change:
+          if subgraph.are_connected(u, v):
+              subgraph.delete_edges([(u, v)])
+          else:
+              subgraph.add_edge(u, v)
+        for name, structure in structures.items():
+            if subgraph.isomorphic(structure):
+                counters[name] += 1
     return counters
+
+# Par
+def update_feature_from_edge_parBfs(G, u, v, counters):
+    old_count = count_subgraphs_from_edge(G, u, v, False)
+    # Change edge
+    new_count = count_subgraphs_from_edge(G, u, v, True)
+    # Make and edit a copy of counters such that we can pass it to all children
+    new_counters = {}
+    for name in counters:
+        new_counters[name] = counters[name] + \
+            (new_count[name] - old_count[name])
+    return new_counters
