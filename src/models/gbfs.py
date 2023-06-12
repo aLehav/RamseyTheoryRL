@@ -25,9 +25,18 @@ from models.heuristic import load_model_by_id
 PROJECT = "alehav/RamseyRL"
 MODEL_NAME = "RAM-HEUR"
 LOAD_MODEL = False
-# Choose from RANDOM, DNN, SCALED_DNN
-HEURISTIC_TYPE = "RANDOM"
-PARAMS = {'training_epochs': 1, 'epochs': 1, 'batch_size':32, 'optimizer':'adam', 'loss':tf.keras.losses.BinaryCrossentropy(from_logits=False, label_smoothing=0.2),'last_activation':'sigmoid','pretrain':True, 'heuristic_type':HEURISTIC_TYPE}
+# Choose from RANDOM, 4PATH, DNN, SCALED_DNN
+HEURISTIC_TYPE = "4PATH"
+# Steps to take before updating model data / weights
+ITER_BATCH = 200 
+PARAMS = {'heuristic_type':HEURISTIC_TYPE, 'iter_batch':ITER_BATCH}
+if HEURISTIC_TYPE in ["DNN", "SCALED_DNN"]:
+    DNN_PARAMS = {'training_epochs': 1, 'epochs': 1, 'batch_size':32, 'optimizer':'adam', 'loss':tf.keras.losses.BinaryCrossentropy(from_logits=False, label_smoothing=0.2),'last_activation':'sigmoid','pretrain':True}
+    PARAMS.update(DNN_PARAMS)
+    if PARAMS['pretrain']:
+        CSV_LIST = ['all_leq6','ramsey_3_4']
+        PARAMS.update({'pretrain_data':CSV_LIST})
+
 N = 8
 S = 3
 T = 4
@@ -166,11 +175,9 @@ def main():
         if HEURISTIC_TYPE == "SCALED_DNN" or HEURISTIC_TYPE == 'DNN':
             model = ch.create_model(PARAMS)
             if PARAMS['pretrain']:
-                TRAIN_PATH = 'data/csv/scaled/'
-                # CSV_LIST = ['all_leq9','ramsey_3_4','ramsey_3_5','ramsey_3_6','ramsey_3_7','ramsey_3_9','ramsey_4_4']
-                CSV_LIST = ['all_leq6','ramsey_3_4']
-                TRAIN_CSV_LIST = [f'{TRAIN_PATH}{CSV}.csv' for CSV in CSV_LIST]
-                train_X, train_y = train.split_X_y_list(TRAIN_CSV_LIST)
+                TRAIN_PATH = 'data/csv/scaled/'                
+                train_csv_list = [f'{TRAIN_PATH}{CSV}.csv' for CSV in PARAMS['pretrain_data']]
+                train_X, train_y = train.split_X_y_list(train_csv_list)
                 print(f"Pretraining on {train_X.shape[0]} samples.")
                 neptune_cbk = hn.get_neptune_cbk(run=run)
                 train.train(model=model, train_X=train_X, train_y=train_y, params=PARAMS, neptune_cbk=neptune_cbk)
@@ -180,6 +187,9 @@ def main():
     if HEURISTIC_TYPE == "RANDOM":
         def heuristic(vectorizations):
             return [random.random() for vec in vectorizations]
+    elif HEURISTIC_TYPE == "4PATH":
+        def heuristic(vectorizations):
+            return [vec["P_4"] for vec in vectorizations]
     elif HEURISTIC_TYPE == "DNN":
         def heuristic(vectorizations):
             X = np.array([list(vec.values())[:-1] for vec in vectorizations])
@@ -203,7 +213,7 @@ def main():
                     nx.write_graph6(nx_graph, 'G.g6', header=False)
                     run['running/G'].upload('G.g6')
 
-    if HEURISTIC_TYPE == "RANDOM":
+    if HEURISTIC_TYPE in ["RANDOM","4PATH"]:
         def update_model(training_data, past, g):
             save_past_and_g(past, g)
         PAST = dict()
@@ -211,7 +221,7 @@ def main():
         G = ig.Graph.GRG(N, N/2/(N-1))
         oldIterations = 0
         timeOffset = 0
-    else:
+    elif HEURISTIC_TYPE in ["SCALED_DNN","DNN"]:
         neptune_cbk = hn.get_neptune_cbk(run)
         def load_data():
             run['running/PAST'].download('past.pkl')
@@ -249,7 +259,6 @@ def main():
     run['running/N'] = N
     run['running/S'] = S
     run['running/T'] = T
-    ITER_BATCH = 100
     # BATCHES = 5
     BATCHES = None
     counter_path = f'data/found_counters/scaled_dnn'
@@ -267,7 +276,7 @@ def main():
             run['running/iterations'].append(iterations)
         return update_running
     update_running = update_run_data(unique_path, startTime)
-    bfs(g=G, unique_path=unique_path, past=PAST, counters=COUNTERS, s=S, t=T, n=N, parallel=PARALLEL, iter_batch=ITER_BATCH, update_model=update_model, heuristic=heuristic, update_running=update_running, oldIterations=oldIterations, batches=BATCHES)
+    bfs(g=G, unique_path=unique_path, past=PAST, counters=COUNTERS, s=S, t=T, n=N, parallel=PARALLEL, iter_batch=PARAMS['iter_batch'], update_model=update_model, heuristic=heuristic, update_running=update_running, oldIterations=oldIterations, batches=BATCHES)
     print(f"Single Threaded Time Elapsed: {timeit.default_timer() - startTime}")
     # startTime = timeit.default_timer()
     # G2 = ig.Graph(7)
