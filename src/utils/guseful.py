@@ -20,9 +20,28 @@ def has_independent_set_of_size_k(G, k):
             return True
     return False
 
+def has_independent_set_of_size_k_from_edge(G, k, e):
+    chosen_nodes = list(e)
+    other_nodes = set(range(G.vcount())) - set(chosen_nodes)
+    for sub_nodes in itertools.combinations(other_nodes, k-2):
+        sub_nodes = chosen_nodes + list(sub_nodes)
+        subgraph = G.subgraph(sub_nodes)
+        if subgraph.ecount() == 0:
+            return True
+    return False
 
 def has_kn(G, k):
     for sub_nodes in itertools.combinations(range(G.vcount()), k):
+        subgraph = G.subgraph(sub_nodes)
+        if is_complete(subgraph):
+            return True
+    return False
+
+def has_kn_from_edge(G, k, e):
+    chosen_nodes = list(e)
+    other_nodes = set(range(G.vcount())) - set(chosen_nodes)
+    for sub_nodes in itertools.combinations(other_nodes, k-2):
+        sub_nodes = chosen_nodes + list(sub_nodes)
         subgraph = G.subgraph(sub_nodes)
         if is_complete(subgraph):
             return True
@@ -56,8 +75,42 @@ def has_independent_set_of_size_k_parBfs(G, k, e):
     return False
 
 
-def check_counterexample(G, s, t):
-    return not has_kn(G, s) and not has_independent_set_of_size_k(G, t)
+def check_counterexample(G, s, t, subgraph_counts):
+    if s == 3:
+        if subgraph_counts["K_4"] + subgraph_counts["K_4-e"] + subgraph_counts["K_3+e"] + subgraph_counts["K_3"] > 0: return False
+    elif s == 4:
+        if subgraph_counts["K_4"] > 0: return False
+    else:
+        if has_kn(G, s): return False
+
+    if t == 4:
+        if subgraph_counts["E_4"] > 0: return False
+    else:
+        if has_independent_set_of_size_k(G, t): return False
+    
+    return True
+    # return not has_kn(G, s) and not has_independent_set_of_size_k(G, t)
+
+def check_counterexample_from_edge(G, s, t, subgraph_counts, e, past_state):
+    if s == 3:
+        if subgraph_counts["K_4"] + subgraph_counts["K_4-e"] + subgraph_counts["K_3+e"] + subgraph_counts["K_3"] > 0: return False
+    elif s == 4:
+        if subgraph_counts["K_4"] > 0: return False
+    else:
+        if past_state == True:
+            if has_kn_from_edge(G, s, e): return False
+        else:
+            if has_kn(G, s): return False
+
+    if t == 4:
+        if subgraph_counts["E_4"] > 0: return False
+    else:
+        if past_state == True:
+            if has_independent_set_of_size_k_from_edge(G, t, e): return False
+        else:
+            if has_independent_set_of_size_k(G, t): return False
+    
+    return True
 
 # Par
 def check_counterexample_parBfs(G, s, t, e):
@@ -79,8 +132,6 @@ def consider_counterexample(G, counters, counter_path):
     for counter in counters:
         if are_graphs_isomorphic(nx_graph, counter):
             is_unique = False
-            sys.stdout.write(
-                '\033[1m\033[92mCounterexample found but not unique.\033[0m\n')
             break
     if is_unique:
         sys.stdout.write(

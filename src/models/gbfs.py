@@ -27,10 +27,10 @@ PROJECT = f"{os.environ.get('NEPTUNE_NAME')}/RamseyRL"
 MODEL_NAME = "RAM-HEUR"
 LOAD_MODEL = False
 
-PARAMS = {'heuristic_type':"SCALED_DNN", # Choose from RANDOM, 4PATH, DNN, SCALED_DNN
-          'iter_batch':1, # Steps to take before updating model data / weights
-          'iter_batches':30, # None if no stopping value, else num. of iter_batches
-          'starting_graph':"FROM_CURRENT"} # Choose from RANDOM, FROM_PRIOR, FROM_CURRENT, EMPTY
+PARAMS = {'heuristic_type':"4PATH", # Choose from RANDOM, 4PATH, DNN, SCALED_DNN
+          'iter_batch':1000, # Steps to take before updating model data / weights
+          'iter_batches':10, # None if no stopping value, else num. of iter_batches
+          'starting_graph':"RANDOM"} # Choose from RANDOM, FROM_PRIOR, FROM_CURRENT, EMPTY
 if PARAMS['heuristic_type'] in ["DNN", "SCALED_DNN"]:
     DNN_PARAMS = {'training_epochs': 5, 'epochs': 1, 'batch_size':32, 'optimizer':'adam', 'loss':tf.keras.losses.BinaryCrossentropy(from_logits=False, label_smoothing=0.2), 'loss_info':'BinaryCrossentropy(from_logits=False, label_smoothing=0.2)', 'last_activation':'sigmoid','pretrain':True}
     PARAMS.update(DNN_PARAMS)
@@ -43,9 +43,9 @@ if PARAMS['starting_graph'] in ["FROM_PRIOR", "FROM_CURRENT"]:
     }
     PARAMS.update(STARTING_GRPAPH_PARAMS)
 
-N = 35
+N = 5
 S = 3
-T = 10
+T = 3
 
 # TODO: Update parallel threaded processes 
 def process_edge(e, G, PAST, used_edges, subgraph_counts, s, t, g6path_to_write_to, gEdgePath_to_write_to, path, heuristic):
@@ -95,13 +95,13 @@ def step_par(G, PAST, used_edges, edges, s, t, g6path_to_write_to, gEdgePath_to_
     return G
 
 
-def step(g, past, edges, s, t, unique_path, subgraph_counts, training_data: list, counters: list, heuristic):
+def step(g, past, edges, s, t, unique_path, subgraph_counts, past_state,  training_data: list, counters: list, heuristic):
     new_graphs = []
     vectorizations = []
 
     for e in edges:
         new_subgraph_counts = update_feature_from_edge(g, e[0], e[1], subgraph_counts)
-        is_counterexample = check_counterexample(g, s, t)
+        is_counterexample, new_t_count = check_counterexample_from_edge(G=g, s=s, t=t, subgraph_counts=new_subgraph_counts, e=e, past_state=past_state)
         vectorization = {**new_subgraph_counts, 'n': g.vcount(), 's': s, 't': t, 'counter': is_counterexample}
         vectorizations.append(vectorization)
         
@@ -116,7 +116,7 @@ def step(g, past, edges, s, t, unique_path, subgraph_counts, training_data: list
     training_data.extend(vectorizations)
 
     if not new_graphs:
-        return None
+        return None, False
 
     heuristic_values = heuristic([vectorization for (_, _, vectorization) in new_graphs])
     max_index = max(range(len(heuristic_values)), key=heuristic_values.__getitem__)
@@ -124,21 +124,23 @@ def step(g, past, edges, s, t, unique_path, subgraph_counts, training_data: list
     change_edge(g,best[0])
     subgraph_counts.update(best[1])
     past[str(best[2])] = heuristic_values[max_index]
+    new_state = best[2]['counter']
 
-    return g
+    return g, new_state
 
 def bfs(g, unique_path, past, counters, s, t, n, parallel, iter_batch, update_model, heuristic, update_running, edges, oldIterations=0, batches=None):
     # Will store a list of vectors either expanded or found to be counterexamples, and upate a model after a given set of iterations
     training_data = []
     subgraph_counts = count_subgraph_structures(g)
     iterations = oldIterations
+    state = check_counterexample(G=g, s=s, t=t, subgraph_counts=subgraph_counts)
     progress_bar = tqdm.tqdm(initial=iterations, total=iterations+iter_batch, leave=False)
     while g is not None:
         if (parallel):
             # TODO Update to match step functionality
             g = step_par(g, past, dict(), edges, s, t, unique_path, subgraph_counts)
         else:
-            g = step(g, past, edges, s, t, unique_path, subgraph_counts, training_data, counters, heuristic)
+            g, state = step(g, past, edges, s, t, unique_path, subgraph_counts, state, training_data, counters, heuristic)
 
         iterations += 1
         progress_bar.update(1)
