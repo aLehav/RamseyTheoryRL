@@ -27,10 +27,10 @@ PROJECT = f"{os.environ.get('NEPTUNE_NAME')}/RamseyRL"
 MODEL_NAME = "RAM-HEUR"
 LOAD_MODEL = False
 
-PARAMS = {'heuristic_type':"4PATH", # Choose from RANDOM, 4PATH, DNN, SCALED_DNN
-          'iter_batch':1000, # Steps to take before updating model data / weights
-          'iter_batches':10, # None if no stopping value, else num. of iter_batches
-          'starting_graph':"RANDOM"} # Choose from RANDOM, FROM_PRIOR, FROM_CURRENT, EMPTY
+PARAMS = {'heuristic_type':"SCALED_DNN", # Choose from RANDOM, 4PATH, DNN, SCALED_DNN
+          'iter_batch':1, # Steps to take before updating model data / weights
+          'iter_batches':20, # None if no stopping value, else num. of iter_batches
+          'starting_graph':"FROM_CURRENT"} # Choose from RANDOM, FROM_PRIOR, FROM_CURRENT, EMPTY
 if PARAMS['heuristic_type'] in ["DNN", "SCALED_DNN"]:
     DNN_PARAMS = {'training_epochs': 5, 'epochs': 1, 'batch_size':32, 'optimizer':'adam', 'loss':tf.keras.losses.BinaryCrossentropy(from_logits=False, label_smoothing=0.2), 'loss_info':'BinaryCrossentropy(from_logits=False, label_smoothing=0.2)', 'last_activation':'sigmoid','pretrain':True}
     PARAMS.update(DNN_PARAMS)
@@ -38,14 +38,14 @@ if PARAMS['heuristic_type'] in ["DNN", "SCALED_DNN"]:
         CSV_LIST = ['all_leq6', 'ramsey_3_4', 'ramsey_3_5', 'ramsey_3_6', 'ramsey_3_7', 'ramsey_3_9']
         PARAMS.update({'pretrain_data':CSV_LIST})
 if PARAMS['starting_graph'] in ["FROM_PRIOR", "FROM_CURRENT"]:
-    STARTING_GRPAPH_PARAMS = {'starting_graph_path':'data/found_counters/r3_9_35_isograph.g6',
+    STARTING_GRPAPH_PARAMS = {'starting_graph_path':'data/found_counters/r3_10_35_isograph.g6',
     'starting_graph_index':0 # 0 is default
     }
     PARAMS.update(STARTING_GRPAPH_PARAMS)
 
-N = 5
-S = 3
-T = 3
+N = 35
+S = 4
+T = 6
 
 # TODO: Update parallel threaded processes 
 def process_edge(e, G, PAST, used_edges, subgraph_counts, s, t, g6path_to_write_to, gEdgePath_to_write_to, path, heuristic):
@@ -101,7 +101,7 @@ def step(g, past, edges, s, t, unique_path, subgraph_counts, past_state,  traini
 
     for e in edges:
         new_subgraph_counts = update_feature_from_edge(g, e[0], e[1], subgraph_counts)
-        is_counterexample, new_t_count = check_counterexample_from_edge(G=g, s=s, t=t, subgraph_counts=new_subgraph_counts, e=e, past_state=past_state)
+        is_counterexample = check_counterexample_from_edge(G=g, s=s, t=t, subgraph_counts=new_subgraph_counts, e=e, past_state=past_state)
         vectorization = {**new_subgraph_counts, 'n': g.vcount(), 's': s, 't': t, 'counter': is_counterexample}
         vectorizations.append(vectorization)
         
