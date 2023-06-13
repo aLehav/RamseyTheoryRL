@@ -27,18 +27,18 @@ PROJECT = f"{os.environ.get('NEPTUNE_NAME')}/RamseyRL"
 MODEL_NAME = "RAM-HEUR"
 LOAD_MODEL = False
 
-PARAMS = {'heuristic_type':"4PATH", # Choose from RANDOM, 4PATH, DNN, SCALED_DNN
-          'iter_batch':200, # Steps to take before updating model data / weights
-          'iter_batches':None, # None if no stopping value, else num. of iter_batches
-          'starting_graph':"RANDOM"} # Choose from RANDOM, FROM_PRIOR, FROM_CURRENT, EMPTY
+PARAMS = {'heuristic_type':"SCALED_DNN", # Choose from RANDOM, 4PATH, DNN, SCALED_DNN
+          'iter_batch':1000, # Steps to take before updating model data / weights
+          'iter_batches':10, # None if no stopping value, else num. of iter_batches
+          'starting_graph':"FROM_CURRENT"} # Choose from RANDOM, FROM_PRIOR, FROM_CURRENT, EMPTY
 if PARAMS['heuristic_type'] in ["DNN", "SCALED_DNN"]:
     DNN_PARAMS = {'training_epochs': 1, 'epochs': 1, 'batch_size':32, 'optimizer':'adam', 'loss':tf.keras.losses.BinaryCrossentropy(from_logits=False, label_smoothing=0.2), 'loss_info':'BinaryCrossentropy(from_logits=False, label_smoothing=0.2)', 'last_activation':'sigmoid','pretrain':True}
     PARAMS.update(DNN_PARAMS)
     if PARAMS['pretrain']:
-        CSV_LIST = ['all_leq6']
+        CSV_LIST = ['all_leq6', 'ramsey_3_4']
         PARAMS.update({'pretrain_data':CSV_LIST})
 if PARAMS['starting_graph'] in ["FROM_PRIOR", "FROM_CURRENT"]:
-    STARTING_GRPAPH_PARAMS = {'starting_graph_path':'data/found_counters/r3_4_8_isograph.g6',
+    STARTING_GRPAPH_PARAMS = {'starting_graph_path':'data/found_counters/r3_5_12_isograph.g6',
     'starting_graph_index':0 # 0 is default
     }
     PARAMS.update(STARTING_GRPAPH_PARAMS)
@@ -169,13 +169,13 @@ def main():
                                 model_id=MODEL_ID,
                                 run_id=RUN_ID)
     else:
-        run, model_version = hn.init_neptune(params=PARAMS,
-                                            project=PROJECT,
-                                            model_name=MODEL_NAME)
-        MODEL_ID = model_version["sys/id"].fetch()
+        run = hn.init_neptune_run(params=PARAMS, project=PROJECT)
         RUN_ID = run["sys/id"].fetch()
-        if PARAMS['heuristic_type'] == "SCALED_DNN" or PARAMS['heuristic_type'] == 'DNN':
+
+        if PARAMS['heuristic_type'] in ["SCALED_DNN", 'DNN']:
+            model_version = hn.init_neptune_model_version(params=PARAMS, project=PROJECT, model_name=MODEL_NAME)
             model = ch.create_model(PARAMS)
+            MODEL_ID = model_version["sys/id"].fetch()
             if PARAMS['pretrain']:
                 TRAIN_PATH = 'data/csv/scaled/'                
                 train_csv_list = [f'{TRAIN_PATH}{CSV}.csv' for CSV in PARAMS['pretrain_data']]
@@ -316,7 +316,8 @@ def main():
     # bfs(G2, g6path_to_write_to, gEdgePath_to_write_to, PAST_path, s, t, True)
     # print(f"Multi Threaded Time Elapsed: {timeit.default_timer() - startTime}")    
     run.stop()
-    model_version.stop()
+    if PARAMS['heuristic_type'] in ["SCALED_DNN", "DNN"]:
+        model_version.stop()
 
 
 if __name__ == '__main__':
