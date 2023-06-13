@@ -28,24 +28,24 @@ MODEL_NAME = "RAM-HEUR"
 LOAD_MODEL = False
 
 PARAMS = {'heuristic_type':"SCALED_DNN", # Choose from RANDOM, 4PATH, DNN, SCALED_DNN
-          'iter_batch':1000, # Steps to take before updating model data / weights
-          'iter_batches':10, # None if no stopping value, else num. of iter_batches
+          'iter_batch':1, # Steps to take before updating model data / weights
+          'iter_batches':30, # None if no stopping value, else num. of iter_batches
           'starting_graph':"FROM_CURRENT"} # Choose from RANDOM, FROM_PRIOR, FROM_CURRENT, EMPTY
 if PARAMS['heuristic_type'] in ["DNN", "SCALED_DNN"]:
-    DNN_PARAMS = {'training_epochs': 1, 'epochs': 1, 'batch_size':32, 'optimizer':'adam', 'loss':tf.keras.losses.BinaryCrossentropy(from_logits=False, label_smoothing=0.2), 'loss_info':'BinaryCrossentropy(from_logits=False, label_smoothing=0.2)', 'last_activation':'sigmoid','pretrain':True}
+    DNN_PARAMS = {'training_epochs': 5, 'epochs': 1, 'batch_size':32, 'optimizer':'adam', 'loss':tf.keras.losses.BinaryCrossentropy(from_logits=False, label_smoothing=0.2), 'loss_info':'BinaryCrossentropy(from_logits=False, label_smoothing=0.2)', 'last_activation':'sigmoid','pretrain':True}
     PARAMS.update(DNN_PARAMS)
     if PARAMS['pretrain']:
-        CSV_LIST = ['all_leq6', 'ramsey_3_4']
+        CSV_LIST = ['all_leq6', 'ramsey_3_4', 'ramsey_3_5', 'ramsey_3_6', 'ramsey_3_7', 'ramsey_3_9']
         PARAMS.update({'pretrain_data':CSV_LIST})
 if PARAMS['starting_graph'] in ["FROM_PRIOR", "FROM_CURRENT"]:
-    STARTING_GRPAPH_PARAMS = {'starting_graph_path':'data/found_counters/r3_5_12_isograph.g6',
+    STARTING_GRPAPH_PARAMS = {'starting_graph_path':'data/found_counters/r3_9_35_isograph.g6',
     'starting_graph_index':0 # 0 is default
     }
     PARAMS.update(STARTING_GRPAPH_PARAMS)
 
-N = 12
+N = 35
 S = 3
-T = 5
+T = 10
 
 # TODO: Update parallel threaded processes 
 def process_edge(e, G, PAST, used_edges, subgraph_counts, s, t, g6path_to_write_to, gEdgePath_to_write_to, path, heuristic):
