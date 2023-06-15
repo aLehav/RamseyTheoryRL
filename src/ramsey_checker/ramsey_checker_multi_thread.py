@@ -108,6 +108,7 @@ class RamseyCheckerMultiThread(RamseyChecker):
         with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
             new_graphs = pool.map(process_edge_wrapper, edges)
 
+        new_graphs = [x for x in new_graphs if x is not None]
 
         if not new_graphs:
             return None

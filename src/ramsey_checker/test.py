@@ -34,6 +34,9 @@ S = 3
 T = 4
 lock = threading.Lock()
 
+# For more stats on update_model
+tf.config.run_functions_eagerly(True)
+
 
 def main():
     ramseyChecker = RamseyCheckerMultiThread()
@@ -127,12 +130,15 @@ def main():
             timeOffset = 0
 
         def update_model(training_data, past, g):
-            X = np.array([list(vec.values())[:-1] for vec in training_data])
-            y = np.array([list(vec.values())[-1] for vec in training_data])
-            model.fit(X, y, epochs=PARAMS['epochs'], batch_size=PARAMS['batch_size'], callbacks=[
-                      neptune_cbk], verbose=1)
-            train.save_trained_model(model_version, model)
-            save_past_and_g(past, g)
+            with lock:
+                print('---------------------------Updating Model--------------------------------')
+                print(training_data)
+                X = np.array([list(vec.values())[:-1] for vec in training_data])
+                y = np.array([list(vec.values())[-1] for vec in training_data])
+                model.fit(X, y, epochs=PARAMS['epochs'], batch_size=PARAMS['batch_size'], callbacks=[
+                        neptune_cbk], verbose=1)
+                train.save_trained_model(model_version, model)
+                save_past_and_g(past, g)
 
     run['running/N'] = N
     run['running/S'] = S
