@@ -219,3 +219,7 @@ my_model/
 
 # Large files
 all_leq9.csv
+
+# Misc
+G.g6
+past.pkl
