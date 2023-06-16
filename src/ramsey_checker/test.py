@@ -101,11 +101,13 @@ def main():
             prior_counters[PARAMS['starting_graph_index']])
         prior_counter.add_vertex()
         random.seed(42)
+        
+        # TODO remove?
         for vertex_index in range(N-1):
             if random.random() <= 0.5:
                 prior_counter.add_edge(N-1, vertex_index)
         
-        # TODO add missing nodes
+        # TODO add missing nodes ?
 
         def generate_starting_graph():
             return prior_counter
@@ -116,7 +118,7 @@ def main():
         prior_counter = ig.Graph.from_networkx(
             prior_counters[PARAMS['starting_graph_index']])
 
-        # Add missing nodes
+        # TODO Add missing nodes REMOVE
         while (prior_counter.vcount() < N):
             prior_counter.add_vertex()
 

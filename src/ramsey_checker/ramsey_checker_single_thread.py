@@ -29,6 +29,7 @@ class RamseyCheckerSingleThread(RamseyChecker):
             if subgraph_counts["K_4"] > 0:
                 return False
         else:
+            # Check table and inequality
             if self.has_kn(G, s):
                 return False
 
@@ -36,6 +37,8 @@ class RamseyCheckerSingleThread(RamseyChecker):
             if subgraph_counts["E_4"] > 0:
                 return False
         else:
+            # Check table and inequality
+
             if self.has_independent_set_of_size_k(G, t):
                 return False
 
@@ -49,6 +52,7 @@ class RamseyCheckerSingleThread(RamseyChecker):
             if subgraph_counts["K_4"] > 0:
                 return False
         else:
+            # Check table and inequality
             if past_state == True:
                 if self.has_kn_from_edge(G, s, e):
                     return False
@@ -60,6 +64,7 @@ class RamseyCheckerSingleThread(RamseyChecker):
             if subgraph_counts["E_4"] > 0:
                 return False
         else:
+            # Check table and inequality
             if past_state == True:
                 if self.has_independent_set_of_size_k_from_edge(G, t, e):
                     return False

@@ -48,6 +48,40 @@ class RamseyChecker(ABC):
         E_4 = ig.Graph(n=4)  # 4 isolated nodes
         self.structures["E_4"] = E_4
 
+        # Add table
+        self.edge_bounds = [
+        [-1 for i in range(0,17)],
+        [-1 for i in range(0, 17)],
+        [-1 for i in range(0, 17)],
+        [*[-1 for i in range(3)], 1, *[-1 for i in range (0,13)]],
+        [*[-1 for i in range(3)], 2, 1, *[-1 for i in range(0, 12)]],
+        [*[-1 for i in range(3)], 5, 2, 1, *[-1 for i in range(0, 11)]], #5
+        [*[-1 for i in range(4)], 3, 2, 1, *[-1 for i in range(0, 10)]],
+        [*[-1 for i in range(4)], 6, 3, 2, 1, *[-1 for i in range(0, 9)]],
+        [*[-1 for i in range(4)], 10, 4, 3, 2, 1, *[-1 for i in range(0, 8)]],
+        [*[-1 for i in range(5)], 7, 4, 3, 2, 1, *[-1 for i in range(0, 7)]],
+        [*[-1 for i in range(5)], 10, 5, 4, 3, 2, 1, *[-1 for i in range(0, 6)]], #10
+        [*[-1 for i in range(5)], 15, 8, 5, 4, 3, 2, 1, *[-1 for i in range(0, 5)]],
+        [*[-1 for i in range(5)], 20, 11, 6, 5, 4, 3, 2, 1, *[-1 for i in range(0, 4)]],
+        [*[-1 for i in range(5)], 26, 15, 9, 6, 5, 4, 3, 2, 1, *[-1 for i in range(0, 3)]],
+        [*[-1 for i in range(6)], 20, 12, 7, 6, 5, 4, 3, 2, 1, *[-1 for i in range(0, 2)]],
+        [*[-1 for i in range(6)], 25, 15, 10, 7, 6, 5, 4, 3, 2, 1, *[-1 for i in range(0, 1)]], #15
+        [*[-1 for i in range(6)], 32, 20, 13, 8, 7, 6, 5, 4, 3, 2, 1],
+        [*[-1 for i in range(6)], 40, 25, 16, 11, 8, 7, 6, 5, 4, 3, 2],
+        [*[-1 for i in range(7)], 30, 20, 14, 9, 8, 7, 6, 5, 4, 3],
+        [*[-1 for i in range(7)], 37, 25, 17, 12, 9, 8, 7, 6, 5, 4],
+        [*[-1 for i in range(7)], 44, 30, 20, 15, 10, 9, 8, 7, 6, 5], #20
+        [*[-1 for i in range(7)], 51, 35, 25, 18, 13, 10, 9, 8, 7, 6],
+        [*[-1 for i in range(7)], 60, 42, 30, 21, 16, 11, 10, 9, 8, 7],
+        [*[-1 for i in range(8)], 49, 35, 25, 19, 14, 11, 10, 9, 8],
+        [*[-1 for i in range(8)], 56, 40, 30, 22, 17, 12, 11, 10, 9],
+        [*[-1 for i in range(8)], 65, 46, 35, 25, 20, 15, 12, 11, 10], #25
+        [*[-1 for i in range(8)], 73, 52, 40, 30, 23, 18, 13, 12, 11],
+        [*[-1 for i in range(8)], 85, 61, 45, 35, 26, 21, 16, 13, 12],
+        [*[-1 for i in range(9)], 68, 51, 40, 30, 24, 19, 14, 13],
+        [*[-1 for i in range(9)], 77, 58, 45, 35, 27, 22, 17, 14],
+        [*[-1 for i in range(9)], 86, 66, 50, 40, 30, 25, 20, 15], #30
+        [*[-1 for i in range(9)], 95, 73, 56, 45, 35, 28, 23, 18]]
 
     # Count subgraph structures O(n^4)
     def count_subgraph_structures(self, G):
