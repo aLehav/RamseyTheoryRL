@@ -25,6 +25,19 @@ class RamseyCheckerSingleThread(RamseyChecker):
         if s == 3:
             if subgraph_counts["K_4"] + subgraph_counts["K_4-e"] + subgraph_counts["K_3+e"] + subgraph_counts["K_3"] > 0:
                 return False
+            # Check table and inequality
+            edge_count = G.ecount()
+            n = G.vcount()
+            bound = self.edge_bounds[n][t]
+            if (bound != -1 and edge_count != bound):
+                return False
+            # e(3,k+1,n) >= (40n-91k)/6
+            first_bound = (40*n - 91*(t-1))/6
+            # e(3,k+1,n) >= 6n-13k
+            second_bound = 6*n - 13*(t-1)
+            best_bound = min(first_bound, second_bound)
+            if (edge_count < best_bound):
+                return False
         elif s == 4:
             if subgraph_counts["K_4"] > 0:
                 return False
@@ -44,27 +57,38 @@ class RamseyCheckerSingleThread(RamseyChecker):
 
         return True
     
+    # Assume t > s
     def check_counterexample_from_edge(self, G, s, t, subgraph_counts, e, past_state):
         if s == 3:
             if subgraph_counts["K_4"] + subgraph_counts["K_4-e"] + subgraph_counts["K_3+e"] + subgraph_counts["K_3"] > 0:
+                return False
+            # Check table and inequality
+            edge_count = G.ecount()
+            n = G.vcount()
+            bound = self.edge_bounds[n][t]
+            if (bound != -1 and edge_count != bound):
+                return False
+            # e(3,k+1,n) >= (40n-91k)/6
+            first_bound = (40*n - 91*(t-1))/6
+            # e(3,k+1,n) >= 6n-13k
+            second_bound = 6*n - 13*(t-1)
+            best_bound = min(first_bound,second_bound)
+            if (edge_count < best_bound):
                 return False
         elif s == 4:
             if subgraph_counts["K_4"] > 0:
                 return False
         else:
-            # Check table and inequality
             if past_state == True:
                 if self.has_kn_from_edge(G, s, e):
                     return False
             else:
                 if self.has_kn(G, s):
                     return False
-
         if t == 4:
             if subgraph_counts["E_4"] > 0:
                 return False
         else:
-            # Check table and inequality
             if past_state == True:
                 if self.has_independent_set_of_size_k_from_edge(G, t, e):
                     return False
