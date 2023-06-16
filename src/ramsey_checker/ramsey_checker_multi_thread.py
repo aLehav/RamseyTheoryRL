@@ -123,11 +123,7 @@ class RamseyCheckerMultiThread(RamseyChecker):
         past[str(best[2])] = heuristic_values[max_index]
         return g
 
-    def bfs(self, g, unique_path, past, counters, s, t, n, iter_batch, update_model, heuristic, update_running, oldIterations=0, batches=None):
-        # we consider all edges
-        edges = [(i, j) for i in range(n)
-                 for j in range(i+1, n)]
-
+    def bfs(self, g, unique_path, past, counters, s, t, n, iter_batch, update_model, heuristic, update_running, edges, oldIterations=0, batches=None):
         # Will store a list of vectors either expanded or found to be counterexamples, and upate a model after a given set of iterations
         training_data = []
         subgraph_counts = self.count_subgraph_structures(g)

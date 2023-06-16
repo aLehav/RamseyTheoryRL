@@ -21,8 +21,53 @@ class RamseyCheckerSingleThread(RamseyChecker):
                 return True
         return False
 
-    def check_counterexample(self, G, s, t):
-        return not self.has_kn(G, s) and not self.has_independent_set_of_size_k(G, t)
+    def check_counterexample(self, G, s, t, subgraph_counts):
+        if s == 3:
+            if subgraph_counts["K_4"] + subgraph_counts["K_4-e"] + subgraph_counts["K_3+e"] + subgraph_counts["K_3"] > 0:
+                return False
+        elif s == 4:
+            if subgraph_counts["K_4"] > 0:
+                return False
+        else:
+            if self.has_kn(G, s):
+                return False
+
+        if t == 4:
+            if subgraph_counts["E_4"] > 0:
+                return False
+        else:
+            if self.has_independent_set_of_size_k(G, t):
+                return False
+
+        return True
+    
+    def check_counterexample_from_edge(self, G, s, t, subgraph_counts, e, past_state):
+        if s == 3:
+            if subgraph_counts["K_4"] + subgraph_counts["K_4-e"] + subgraph_counts["K_3+e"] + subgraph_counts["K_3"] > 0:
+                return False
+        elif s == 4:
+            if subgraph_counts["K_4"] > 0:
+                return False
+        else:
+            if past_state == True:
+                if self.has_kn_from_edge(G, s, e):
+                    return False
+            else:
+                if self.has_kn(G, s):
+                    return False
+
+        if t == 4:
+            if subgraph_counts["E_4"] > 0:
+                return False
+        else:
+            if past_state == True:
+                if self.has_independent_set_of_size_k_from_edge(G, t, e):
+                    return False
+            else:
+                if self.has_independent_set_of_size_k(G, t):
+                    return False
+
+        return True
 
     def consider_counterexample(self, G, counters, counter_path):
         nx_graph = nx.Graph(G.get_edgelist())
@@ -63,14 +108,15 @@ class RamseyCheckerSingleThread(RamseyChecker):
                 (new_count[name] - old_count[name])
         return new_counters
 
-    def step(self, g, past, edges, s, t, unique_path, subgraph_counts, training_data: list, counters: list, heuristic):
+    def step(self, g, past, edges, s, t, unique_path, subgraph_counts, past_state, training_data: list, counters: list, heuristic):
         new_graphs = []
         vectorizations = []
 
         for e in edges:
             new_subgraph_counts = self.update_feature_from_edge(
                 g, e[0], e[1], subgraph_counts)
-            is_counterexample = self.check_counterexample(g, s, t)
+            is_counterexample = self.check_counterexample(
+                g, s, t, subgraph_counts=new_subgraph_counts)
             vectorization = {**new_subgraph_counts, 'n': g.vcount(),
                             's': s, 't': t, 'counter': is_counterexample}
             vectorizations.append(vectorization)
@@ -87,7 +133,7 @@ class RamseyCheckerSingleThread(RamseyChecker):
         training_data.extend(vectorizations)
 
         if not new_graphs:
-            return None
+            return None, None
 
         heuristic_values = heuristic(
             [vectorization for (_, _, vectorization) in new_graphs])
@@ -97,23 +143,22 @@ class RamseyCheckerSingleThread(RamseyChecker):
         self.change_edge(g, best[0])
         subgraph_counts.update(best[1])
         past[str(best[2])] = heuristic_values[max_index]
+        new_state = best[2]['counter']
 
-        return g
+        return g, new_state
 
-    def bfs(self, g, unique_path, past, counters, s, t, n, iter_batch, update_model, heuristic, update_running, oldIterations=0, batches=None):
-        # we consider all edges
-        edges = [(i, j) for i in range(n)
-                 for j in range(i+1, n)]
-
+    def bfs(self, g, unique_path, past, counters, s, t, n, iter_batch, update_model, heuristic, update_running, edges, oldIterations=0, batches=None):
         # Will store a list of vectors either expanded or found to be counterexamples, and upate a model after a given set of iterations
         training_data = []
         subgraph_counts = self.count_subgraph_structures(g)
         iterations = oldIterations
         progress_bar = tqdm.tqdm(
             initial=iterations, total=iterations+iter_batch, leave=False)
+        state = self.check_counterexample(
+            G=g, s=s, t=t, subgraph_counts=subgraph_counts)
         while g is not None:
-            g = self.step(g, past, edges, s, t, unique_path,
-                    subgraph_counts, training_data, counters, heuristic)
+            g, state = self.step(g, past, edges, s, t, unique_path,
+                    subgraph_counts, state, training_data, counters, heuristic)
 
             iterations += 1
             progress_bar.update(1)
@@ -131,6 +176,6 @@ class RamseyCheckerSingleThread(RamseyChecker):
         update_model(training_data, past, g)
         update_running(iterations, len(counters))
         progress_bar.close()
-        print("Total Iterations", iterations)
+        print("\nTotal Iterations", iterations)
 
         return iterations

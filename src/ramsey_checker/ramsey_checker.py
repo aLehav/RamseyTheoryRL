@@ -69,6 +69,26 @@ class RamseyChecker(ABC):
     def are_graphs_isomorphic(self, G1, G2):
         return nx.is_isomorphic(G1, G2)
 
+    def has_kn_from_edge(self, G, k, e):
+        chosen_nodes = list(e)
+        other_nodes = set(range(G.vcount())) - set(chosen_nodes)
+        for sub_nodes in itertools.combinations(other_nodes, k-2):
+            sub_nodes = chosen_nodes + list(sub_nodes)
+            subgraph = G.subgraph(sub_nodes)
+            if self.is_complete(subgraph):
+                return True
+        return False
+
+    def has_independent_set_of_size_k_from_edge(G, k, e):
+        chosen_nodes = list(e)
+        other_nodes = set(range(G.vcount())) - set(chosen_nodes)
+        for sub_nodes in itertools.combinations(other_nodes, k-2):
+            sub_nodes = chosen_nodes + list(sub_nodes)
+            subgraph = G.subgraph(sub_nodes)
+            if subgraph.ecount() == 0:
+                return True
+        return False
+
     @abstractmethod
     def has_independent_set_of_size_k(self, G, k):
         pass
