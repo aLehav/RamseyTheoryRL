@@ -131,6 +131,8 @@ def consider_counterexample(G, counters, counter_path):
     is_unique = True
     for counter in counters:
         if are_graphs_isomorphic(nx_graph, counter):
+            sys.stdout.write(
+                '\033[1m\033[32mCounterexample found but not unique.\033[0m\n')
             is_unique = False
             break
     if is_unique:

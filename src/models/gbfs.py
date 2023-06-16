@@ -28,8 +28,8 @@ MODEL_NAME = "RAM-HEUR"
 LOAD_MODEL = False
 
 PARAMS = {'heuristic_type':"SCALED_DNN", # Choose from RANDOM, 4PATH, DNN, SCALED_DNN
-          'iter_batch':1, # Steps to take before updating model data / weights
-          'iter_batches':20, # None if no stopping value, else num. of iter_batches
+          'iter_batch':2, # Steps to take before updating model data / weights
+          'iter_batches':10, # None if no stopping value, else num. of iter_batches
           'starting_graph':"FROM_CURRENT"} # Choose from RANDOM, FROM_PRIOR, FROM_CURRENT, EMPTY
 if PARAMS['heuristic_type'] in ["DNN", "SCALED_DNN"]:
     DNN_PARAMS = {'training_epochs': 5, 'epochs': 1, 'batch_size':32, 'optimizer':'adam', 'loss':tf.keras.losses.BinaryCrossentropy(from_logits=False, label_smoothing=0.2), 'loss_info':'BinaryCrossentropy(from_logits=False, label_smoothing=0.2)', 'last_activation':'sigmoid','pretrain':True}
@@ -38,9 +38,10 @@ if PARAMS['heuristic_type'] in ["DNN", "SCALED_DNN"]:
         CSV_LIST = ['all_leq6', 'ramsey_3_4', 'ramsey_3_5', 'ramsey_3_6', 'ramsey_3_7', 'ramsey_3_9']
         PARAMS.update({'pretrain_data':CSV_LIST})
 if PARAMS['starting_graph'] in ["FROM_PRIOR", "FROM_CURRENT"]:
-    STARTING_GRPAPH_PARAMS = {'starting_graph_path':'data/found_counters/r3_10_35_isograph.g6',
-    'starting_graph_index':0 # 0 is default
+    STARTING_GRPAPH_PARAMS = {'starting_graph_path':'data/found_counters/r4_6_35_isograph.g6',
+    'starting_graph_index':random.randint(0,36) # 0 is default
     }
+    print(f"Starting from graph {STARTING_GRPAPH_PARAMS['starting_graph_index']}")
     PARAMS.update(STARTING_GRPAPH_PARAMS)
 
 N = 35
@@ -89,12 +90,7 @@ def bfs(g, unique_path, past, counters, s, t, n, parallel, iter_batch, update_mo
     state = check_counterexample(G=g, s=s, t=t, subgraph_counts=subgraph_counts)
     progress_bar = tqdm.tqdm(initial=iterations, total=iterations+iter_batch, leave=False)
     while g is not None:
-        if (parallel):
-            # TODO Update to match step functionality
-            g = step_par(g, past, dict(), edges, s, t, unique_path, subgraph_counts)
-        else:
-            g, state = step(g, past, edges, s, t, unique_path, subgraph_counts, state, training_data, counters, heuristic)
-
+        g, state = step(g, past, edges, s, t, unique_path, subgraph_counts, state, training_data, counters, heuristic)
         iterations += 1
         progress_bar.update(1)
         progress_bar.set_postfix(iterations=f'{progress_bar.n}/{progress_bar.total} Iterations Completed')
@@ -160,6 +156,7 @@ def main():
     elif PARAMS['starting_graph'] == "FROM_CURRENT":
         prior_counters = nx.read_graph6(PARAMS['starting_graph_path'])
         prior_counters = [prior_counters] if type(prior_counters) != list else prior_counters
+        COUNTERS = prior_counters
         prior_counter = ig.Graph.from_networkx(prior_counters[PARAMS['starting_graph_index']])
         def generate_starting_graph():
             return prior_counter
@@ -207,7 +204,7 @@ def main():
         def update_model(training_data, past, g):
             save_past_and_g(past, g)
         PAST = dict()
-        COUNTERS = []
+        if PARAMS['starting_graph'] != "FROM_CURRENT": COUNTERS = []
         G = generate_starting_graph()
         oldIterations = 0
         timeOffset = 0
@@ -235,7 +232,7 @@ def main():
             PAST, COUNTERS, G, oldIterations, timeOffset = load_data()
         else:
             PAST = dict()
-            COUNTERS = []
+            if PARAMS['starting_graph'] != "FROM_CURRENT": COUNTERS = []
             G = generate_starting_graph()
             oldIterations = 0
             timeOffset = 0
