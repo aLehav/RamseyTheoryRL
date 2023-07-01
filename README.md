@@ -2,6 +2,10 @@
 
 This is a small project that uses logistic regression with hybrid parameters and grid search to train or compare RL models for developing counterexamples for Ramsey Theory values.
 
+## Structure
+- All runnable code inside src/ramsey_checker
+- Set environment variables, hyperparameters and data paths then run `python test.py`
+
 ## Purpose
 
 The purpose of this project is to develop a model that can find a graph disproving a lower bound of R(r,k) using RL models and logistic regression with hybrid parameters. This will be accomplished through the following steps:

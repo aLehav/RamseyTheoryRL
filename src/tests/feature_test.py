@@ -5,6 +5,7 @@ import sys
 sys.path.append("..")
 from utils.features import *
 
+# Deprecated
 G = nx.complete_graph(3)
 G.add_node(3)
 

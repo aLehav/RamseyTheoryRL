@@ -2,6 +2,7 @@ from multiprocessing import Pool, Manager
 import itertools
 import igraph as ig
 
+# Deprecated
 
 def is_complete(G):
     n = G.vcount()
@@ -14,8 +15,6 @@ def check_independent_set(args):
     return subgraph.ecount() == 0
 
 # Parallelize
-
-
 def has_independent_set_of_size_k(G, k):
     with Pool() as pool:
         args = [(G, sub_nodes)
@@ -30,9 +29,6 @@ def check_complete(args):
     G, sub_nodes = args
     subgraph = G.subgraph(sub_nodes)
     return is_complete(subgraph)
-
-# Parallelize
-
 
 def has_kn(G, k):
     with Pool() as pool:

@@ -74,9 +74,10 @@ def main():
   count_subgraph_structures(G9)
   print(f"Single Threaded Time Elapsed {timeit.default_timer() - startTime}")
 
-  startTime = timeit.default_timer()
-  count_subgraph_structures_parallel(G9)
-  print(f"Multi Threaded Time Elapsed {timeit.default_timer() - startTime}\n")
+# Deprecated
+#   startTime = timeit.default_timer()
+#   count_subgraph_structures_parallel(G9)
+#   print(f"Multi Threaded Time Elapsed {timeit.default_timer() - startTime}\n")
 
   # Timing tests
   print("Count_subgraphs_from_edge Tests")
@@ -84,30 +85,11 @@ def main():
   count_subgraphs_from_edge(G9, 3,4)
   print(f"Single Threaded Time Elapsed {timeit.default_timer() - startTime}")
 
-  startTime = timeit.default_timer()
-  count_subgraphs_from_edge_parallel(G9,3,4)
-  print(f"Multi Threaded Time Elapsed {timeit.default_timer() - startTime}")
-  print(f"Total Time elapsed: {timeit.default_timer() - totalStartTime}")
-
-# def add_one(n):
-#   my_temp = list(range(100))
-#   my_temp[3] = 3
-#   for j in range(100):
-#     my_temp[j] = my_temp[j] > 5
-#   return n+1
-
-# def main():
-#   numbers = list(range(10000000))
+# Deprecated
 #   startTime = timeit.default_timer()
-#   temp_numbers = list(range(10000000))
-#   for i in range(len(temp_numbers)):
-#     temp_numbers[i] = add_one(temp_numbers[i])
-#   print(f"Single Threaded Time Elapsed {timeit.default_timer() - startTime}")
-
-#   startTime = timeit.default_timer()
-#   with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
-#       results = pool.map(add_one, numbers)
+#   count_subgraphs_from_edge_parallel(G9,3,4)
 #   print(f"Multi Threaded Time Elapsed {timeit.default_timer() - startTime}")
+#   print(f"Total Time elapsed: {timeit.default_timer() - totalStartTime}")
 
 
 
