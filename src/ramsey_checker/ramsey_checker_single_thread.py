@@ -144,8 +144,8 @@ class RamseyCheckerSingleThread(RamseyChecker):
         for e in edges:
             new_subgraph_counts = self.update_feature_from_edge(
                 g, e[0], e[1], subgraph_counts)
-            is_counterexample = self.check_counterexample(
-                g, s, t, subgraph_counts=new_subgraph_counts)
+            is_counterexample = self.check_counterexample_from_edge(
+                g, s, t, subgraph_counts=new_subgraph_counts, e=e, past_state=past_state)
             vectorization = {**new_subgraph_counts, 'n': g.vcount(),
                             's': s, 't': t, 'counter': is_counterexample}
             vectorizations.append(vectorization)

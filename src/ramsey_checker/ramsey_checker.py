@@ -113,7 +113,7 @@ class RamseyChecker(ABC):
                 return True
         return False
 
-    def has_independent_set_of_size_k_from_edge(G, k, e):
+    def has_independent_set_of_size_k_from_edge(self, G, k, e):
         chosen_nodes = list(e)
         other_nodes = set(range(G.vcount())) - set(chosen_nodes)
         for sub_nodes in itertools.combinations(other_nodes, k-2):

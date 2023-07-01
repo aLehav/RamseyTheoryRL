@@ -37,8 +37,86 @@ class RamseyCheckerMultiThread(RamseyChecker):
                 return True
         return False
 
-    def check_counterexample(self, G, s, t, e):
-        return not self.has_kn(G, s, e) and not self.has_independent_set_of_size_k(G, t, e)
+    def check_counterexample(self, G, s, t, subgraph_counts):
+        if s == 3:
+            if subgraph_counts["K_4"] + subgraph_counts["K_4-e"] + subgraph_counts["K_3+e"] + subgraph_counts["K_3"] > 0:
+                return False
+            # Check table and inequality
+            edge_count = G.ecount()
+            n = G.vcount()
+            bound = self.edge_bounds[n][t]
+            if (bound != -1 and edge_count != bound):
+                return False
+            # e(3,k+1,n) >= (40n-91k)/6
+            first_bound = (40*n - 91*(t-1))/6
+            # e(3,k+1,n) >= 6n-13k
+            second_bound = 6*n - 13*(t-1)
+            best_bound = min(first_bound, second_bound)
+            if (edge_count < best_bound):
+                return False
+        elif s == 4:
+            if subgraph_counts["K_4"] > 0:
+                return False
+        else:
+            # Check table and inequality
+            if self.has_kn(G, s):
+                return False
+
+        if t == 4:
+            if subgraph_counts["E_4"] > 0:
+                return False
+        else:
+            # Check table and inequality
+
+            if self.has_independent_set_of_size_k(G, t):
+                return False
+
+        return True
+
+    def check_counterexample_from_edge(self, G, s, t, subgraph_counts, e, past_state):
+        if s == 3:
+            if subgraph_counts["K_4"] + subgraph_counts["K_4-e"] + subgraph_counts["K_3+e"] + subgraph_counts["K_3"] > 0:
+                return False
+            # Check table and inequality
+            if (G.are_connected(*e)):
+                offset = -1
+            else:
+                offset = 1
+            edge_count = G.ecount() + offset
+            edge_count = G.ecount()
+            n = G.vcount()
+            bound = self.edge_bounds[n][t]
+            if (bound != -1 and edge_count != bound):
+                return False
+            # e(3,k+1,n) >= (40n-91k)/6
+            first_bound = (40*n - 91*(t-1))/6
+            # e(3,k+1,n) >= 6n-13k
+            second_bound = 6*n - 13*(t-1)
+            best_bound = min(first_bound,second_bound)
+            if (edge_count < best_bound):
+                return False
+        elif s == 4:
+            if subgraph_counts["K_4"] > 0:
+                return False
+        else:
+            if past_state == True:
+                if self.has_kn_from_edge(G, s, e):
+                    return False
+            else:
+                if self.has_kn(G, s):
+                    return False
+        if t == 4:
+            if subgraph_counts["E_4"] > 0:
+                return False
+        else:
+            if past_state == True:
+                if self.has_independent_set_of_size_k_from_edge(G, t, e):
+                    return False
+            else:
+                if self.has_independent_set_of_size_k(G, t):
+                    return False
+
+        return True
 
     def consider_counterexample(self, G, counters, counter_path, e):
         nx_graph = nx.Graph(G.get_edgelist())
@@ -84,10 +162,10 @@ class RamseyCheckerMultiThread(RamseyChecker):
                 (new_count[name] - old_count[name])
         return new_counters
 
-    def process_edge(self, e, g, past, subgraph_counts, s, t, unique_path, training_data, counters):
+    def process_edge(self, e, g, past, subgraph_counts, s, t, unique_path, training_data, counters, past_state):
         new_subgraph_counts = self.update_feature_from_edge(
             g, e[0], e[1], subgraph_counts)
-        is_counterexample = self.check_counterexample(g, s, t, e)
+        is_counterexample = self.check_counterexample_from_edge(g, s, t, new_subgraph_counts, e, past_state)
         vectorization = {**new_subgraph_counts, 'n': g.vcount(),
                          's': s, 't': t, 'counter': is_counterexample}
 
@@ -101,9 +179,9 @@ class RamseyCheckerMultiThread(RamseyChecker):
         if str(vectorization) not in past.keys():
             return (e, new_subgraph_counts, vectorization)
 
-    def step_par(self, g, past, edges, s, t, unique_path, subgraph_counts, training_data, counters, heuristic):
+    def step_par(self, g, past, edges, s, t, unique_path, subgraph_counts, training_data, counters, heuristic, past_state):
         process_edge_wrapper = partial(self.process_edge, g=g, past=past, subgraph_counts=subgraph_counts,
-                                       s=s, t=t,  unique_path=unique_path, training_data=training_data, counters=counters)
+                                       s=s, t=t,  unique_path=unique_path, training_data=training_data, counters=counters, past_state=past_state)
 
         with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
             new_graphs = pool.map(process_edge_wrapper, edges)
@@ -128,11 +206,13 @@ class RamseyCheckerMultiThread(RamseyChecker):
         training_data = []
         subgraph_counts = self.count_subgraph_structures(g)
         iterations = oldIterations
+        state = self.check_counterexample(
+            G=g, s=s, t=t, subgraph_counts=subgraph_counts)
         progress_bar = tqdm.tqdm(
             initial=iterations, total=iterations+iter_batch, leave=False)
         while g is not None:
             g = self.step_par(g, past, edges, s, t,
-                              unique_path, subgraph_counts, training_data, counters, heuristic)
+                              unique_path, subgraph_counts, training_data, counters, heuristic, state)
 
             iterations += 1
             progress_bar.update(1)

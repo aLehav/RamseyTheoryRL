@@ -1,4 +1,3 @@
-
 import multiprocessing
 import igraph as ig
 import numpy as np
@@ -35,7 +34,7 @@ LOAD_MODEL = False
 
 PARAMS = {'heuristic_type': "SCALED_DNN",  # Choose from RANDOM, 4PATH, DNN, SCALED_DNN
           'iter_batch': 1,  # Steps to take before updating model data / weights
-          'iter_batches': 1800,  # None if no stopping value, else num. of iter_batches
+          'iter_batches': 1000,  # None if no stopping value, else num. of iter_batches
           'starting_graph': "FROM_CURRENT"}  # Choose from RANDOM, FROM_PRIOR, FROM_CURRENT, EMPTY
 if PARAMS['heuristic_type'] in ["DNN", "SCALED_DNN"]:
     DNN_PARAMS = {'training_epochs': 5, 'epochs': 1, 'batch_size': 32, 'optimizer': 'adam', 'loss': tf.keras.losses.BinaryCrossentropy(
@@ -46,14 +45,14 @@ if PARAMS['heuristic_type'] in ["DNN", "SCALED_DNN"]:
                     'ramsey_3_6', 'ramsey_3_7', 'ramsey_3_9']
         PARAMS.update({'pretrain_data': CSV_LIST})
 if PARAMS['starting_graph'] in ["FROM_PRIOR", "FROM_CURRENT"]:
-    STARTING_GRPAPH_PARAMS = {'starting_graph_path': sys.path[-1] + '/data/found_counters/r3_4_6_isograph.g6', # Mac: Absolute path
+    STARTING_GRPAPH_PARAMS = {'starting_graph_path': sys.path[-1] + '/data/found_counters/r3_5_12_isograph.g6', # Mac: Absolute path
                               'starting_graph_index': 0  # 0 is default
                               }
     PARAMS.update(STARTING_GRPAPH_PARAMS)
 
-N = 8
+N = 12
 S = 3
-T = 4
+T = 5
 
 
 def main():
@@ -101,13 +100,15 @@ def main():
             prior_counters[PARAMS['starting_graph_index']])
         prior_counter.add_vertex()
         random.seed(42)
+
+        # TODO add missing nodes
+        while (prior_counter.vcount() < N):
+            prior_counter.add_vertex()
         
         # TODO remove?
         for vertex_index in range(N-1):
             if random.random() <= 0.5:
                 prior_counter.add_edge(N-1, vertex_index)
-        
-        # TODO add missing nodes ?
 
         def generate_starting_graph():
             return prior_counter
@@ -117,10 +118,6 @@ def main():
             prior_counters) != list else prior_counters
         prior_counter = ig.Graph.from_networkx(
             prior_counters[PARAMS['starting_graph_index']])
-
-        # TODO Add missing nodes REMOVE
-        while (prior_counter.vcount() < N):
-            prior_counter.add_vertex()
 
         def generate_starting_graph():
             return prior_counter
@@ -150,7 +147,8 @@ def main():
         def heuristic(vectorizations):
             X = np.array([list(vec.values())[:-1]
                          for vec in vectorizations]).astype(float)
-            X[:11] /= scaler
+            if (scaler != 0):
+                X[:11] /= scaler
             predictions = model.predict(X, verbose=0)
             return [prediction[0] for prediction in predictions]
     else:
