@@ -2,8 +2,9 @@ from setuptools import setup, find_packages
 
 setup(
     name="RamseyTheoryRL",
-    version="0.1",
+    version="0.62",
     packages=find_packages(),
+    include_package_data=True,
     author="Adam Lehavi, Steve Vott",
     author_email="svott03@gmail.com, alehavi@usc.edu",
     description="Ramsey Number Explorer",

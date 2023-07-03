@@ -1,4 +1,4 @@
-from ramsey_checker import RamseyChecker
+from .ramsey_checker import RamseyChecker
 import itertools
 import networkx as nx
 import sys

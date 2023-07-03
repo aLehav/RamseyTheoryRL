@@ -3,8 +3,9 @@
 This is a small project that uses logistic regression with hybrid parameters and grid search to train or compare RL models for developing counterexamples for Ramsey Theory values.
 
 ## Structure
-- All runnable code inside src/ramsey_checker
+- All runnable code inside src/ramsey_checker/test
 - Set environment variables, hyperparameters and data paths then run `python test.py`
+- TODO: turn global parameters into NeptuneRunnerParameters
 
 ## Purpose
 

@@ -14,8 +14,8 @@ import pickle
 import random
 import sys
 import os
-from ramsey_checker_multi_thread import RamseyCheckerMultiThread
-from ramsey_checker_single_thread import RamseyCheckerSingleThread
+from .ramsey_checker_multi_thread import RamseyCheckerMultiThread
+from .ramsey_checker_single_thread import RamseyCheckerSingleThread
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(parent_dir)
 from models.heuristic import load_model_by_id
@@ -57,6 +57,7 @@ T = 5
 class NeptuneRunner:
     def run(self):
         ramsey_checker = RamseyCheckerSingleThread()
+        ramsey_multi = RamseyCheckerMultiThread()
         if LOAD_MODEL:
             MODEL_ID = "RAM-HEUR-85"
             RUN_ID = "RAM-94"
