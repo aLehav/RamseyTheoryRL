@@ -1,35 +1,25 @@
-# Ramsey Theory RL Exploration
+# Ramsey Theory RL
 
-This is a small project that uses logistic regression with hybrid parameters and grid search to train or compare RL models for developing counterexamples for Ramsey Theory values.
+## About
+Ramsey Theory RL is a project that seeks to use simple RL and a basic graph invariant to pseudo-intelligently search for counterexamples for unknown Ramsey number bounds. The main aims of the project are to either [improve the bounds](https://en.wikipedia.org/wiki/Ramsey%27s_theorem) or to assist in finding more [isomorphic graphs](https://users.cecs.anu.edu.au/~bdm/data/ramsey.html) for known numbers to help future efforts. 
 
-## Structure
-- All runnable code inside src/ramsey_checker/test
-- Set environment variables, hyperparameters and data paths then run `python test.py`
-- TODO: turn global parameters into NeptuneRunnerParameters
+Our algorithm is an informed Best First Search. At each iteration, all neighbors (1 changed edge away) to the current graph are numerically represented by their invariant. The invariant is counts of all 11 posible isomorphic 4-graphs inside of them. The neighbors with invariants not yet expanded are then passed through a heuristic which determines which graph to expand next. Past literature has used the count of 4-paths as a heuristic. We use a DNN with 1 hidden layer that we iteratively train on seen graphs, to encourage straying away from known areas. 
 
-## Purpose
+The algorithm can pretrain on known graphs and can start from a random graphs, known counterexamples from a smaller $n$, and known counterexamples from the same $n$. Logging is done through neptune.ai.
 
-The purpose of this project is to develop a model that can find a graph disproving a lower bound of R(r,k) using RL models and logistic regression with hybrid parameters. This will be accomplished through the following steps:
+Our algorithm has a runtime of O($n^2 * n^{\min({4,s,t})}$) per step. As such, values like R(3,10) are less practical to explore, and so our current focus is on R(4,6) and R(5,5).
 
-1. Define the problem and requirements: Clearly define the problem and the requirements for the model to be developed.
+## Getting Started
+- Sign up with [Neptune AI](https://neptune.ai/)
+- Create a project called RamseyRL with a model called RAM-HEUR
+- Get your Neptune API token and name
+- Follow the steps in  `C:\Users\adaml\OneDrive\SC Files\RamseyTheoryRL\RamseyTheoryRL\ColabRunner.ipynb`
 
-2. Gather data: Gather the data needed to train and test the model. This will involve collecting data on graphs and their properties.
+## Future Changes
 
-3. Preprocess data: Preprocess the data to make it suitable for use with the model. This may involve cleaning the data, transforming it into a suitable format, or encoding it in a way that can be used by the model.
-
-4. Train and test the model: Train and test the model using logistic regression with hybrid parameters and grid search to find the best hyperparameters. This will involve using RL models to develop counterexamples for Ramsey Theory values and evaluating the model's performance.
-
-5. Evaluate and compare results: Evaluate the performance of the model and compare it to other RL models. This will involve comparing the accuracy, precision, and recall of the model to other models and analyzing the results.
-
-## Progress
-
-- [x] Define the problem and requirements
-- [ ] Gather data
-- [ ] Preprocess data
-- [ ] Train and test the model
-- [ ] Evaluate and compare results
-
-As of now, the problem and requirements for the model have been defined. The next steps will be to gather and preprocess the data, train and test the model, and evaluate and compare the results.
+- Improving documentation and usability
+- Removing and rearranging older content
+- Integrating pip package to Getting Started portion
 
 # Contributors
 <a href="https://github.com/aLehav/RamseyTheoryRL/graphs/contributors">
