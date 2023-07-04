@@ -27,123 +27,123 @@ from utils.gfeatures import *
 parent_dir = os.path.abspath(os.path.join(parent_dir, ".."))
 sys.path.append(parent_dir)
 
-PROJECT = f"{os.environ.get('NEPTUNE_NAME')}/RamseyRL"
-MODEL_NAME = "RAM-HEUR"
-LOAD_MODEL = False
-
-PARAMS = {'heuristic_type': "SCALED_DNN",  # Choose from RANDOM, 4PATH, DNN, SCALED_DNN
+class NeptuneRunner:
+    def get_default_params():
+        PARAMS = {'heuristic_type': "SCALED_DNN",  # Choose from RANDOM, 4PATH, DNN, SCALED_DNN
           'iter_batch': 1,  # Steps to take before updating model data / weights
           'iter_batches': 1000,  # None if no stopping value, else num. of iter_batches
           'starting_graph': "FROM_CURRENT"}  # Choose from RANDOM, FROM_PRIOR, FROM_CURRENT, EMPTY
-if PARAMS['heuristic_type'] in ["DNN", "SCALED_DNN"]:
-    DNN_PARAMS = {'training_epochs': 5, 'epochs': 1, 'batch_size': 32, 'optimizer': 'adam', 'loss': tf.keras.losses.BinaryCrossentropy(
-        from_logits=False, label_smoothing=0.2), 'loss_info': 'BinaryCrossentropy(from_logits=False, label_smoothing=0.2)', 'last_activation': 'sigmoid', 'pretrain': True}
-    PARAMS.update(DNN_PARAMS)
-    if PARAMS['pretrain']:
-        CSV_LIST = ['all_leq6', 'ramsey_3_4', 'ramsey_3_5',
-                    'ramsey_3_6', 'ramsey_3_7', 'ramsey_3_9']
-        PARAMS.update({'pretrain_data': CSV_LIST})
-if PARAMS['starting_graph'] in ["FROM_PRIOR", "FROM_CURRENT"]:
-    STARTING_GRPAPH_PARAMS = {'starting_graph_path': sys.path[-1] + '/data/found_counters/r3_5_12_isograph.g6', # Mac: Absolute path
-                              'starting_graph_index': 0  # 0 is default
-                              }
-    PARAMS.update(STARTING_GRPAPH_PARAMS)
-
-N = 12
-S = 3
-T = 5
-
-
-class NeptuneRunner:
+        if PARAMS['heuristic_type'] in ["DNN", "SCALED_DNN"]:
+            DNN_PARAMS = {'training_epochs': 5, 'epochs': 1, 'batch_size': 32, 'optimizer': 'adam', 'loss': tf.keras.losses.BinaryCrossentropy(
+                from_logits=False, label_smoothing=0.2), 'loss_info': 'BinaryCrossentropy(from_logits=False, label_smoothing=0.2)', 'last_activation': 'sigmoid', 'pretrain': True}
+            PARAMS.update(DNN_PARAMS)
+            if PARAMS['pretrain']:
+                CSV_LIST = ['all_leq6', 'ramsey_3_4', 'ramsey_3_5',
+                            'ramsey_3_6', 'ramsey_3_7', 'ramsey_3_9']
+                PARAMS.update({'pretrain_data': CSV_LIST})
+        if PARAMS['starting_graph'] in ["FROM_PRIOR", "FROM_CURRENT"]:
+            STARTING_GRPAPH_PARAMS = {'starting_graph_path': sys.path[-1] + '/data/found_counters/r3_5_12_isograph.g6', # Mac: Absolute path
+                                    'starting_graph_index': 0  # 0 is default
+                                    }
+            PARAMS.update(STARTING_GRPAPH_PARAMS)
+        return PARAMS
+    def __init__(self, n, s, t, project = f"{os.enself.viron.get('NEPTUNE_NAME')}/RamseyRL", model_name = 'RAM-HEUR', load_model=False, params=get_default_params()):
+        self.N = n
+        self.S = s
+        self.T = t
+        self.PROJECT = project
+        self.MODEL_NAME = model_name
+        self.LOAD_MODEL = load_model
+        self.PARAMS = params
     def run(self):
         ramsey_checker = RamseyCheckerSingleThread()
         ramsey_multi = RamseyCheckerMultiThread()
-        if LOAD_MODEL:
+        if self.LOAD_MODEL:
             MODEL_ID = "RAM-HEUR-85"
             RUN_ID = "RAM-94"
             print(f"Loading {MODEL_ID} and {RUN_ID}.")
-            run, model_version, model = load_model_by_id(project=PROJECT,
-                                                        model_name=MODEL_NAME,
+            run, model_version, model = load_model_by_id(project=self.PROJECT,
+                                                        model_name=self.MODEL_NAME,
                                                         model_id=MODEL_ID,
                                                         run_id=RUN_ID)
         else:
-            run = hn.init_neptune_run(params=PARAMS, project=PROJECT)
+            run = hn.init_neptune_run(params=self.PARAMS, project=self.PROJECT)
             RUN_ID = run["sys/id"].fetch()
 
-            if PARAMS['heuristic_type'] in ["SCALED_DNN", 'DNN']:
+            if self.PARAMS['heuristic_type'] in ["SCALED_DNN", 'DNN']:
                 model_version = hn.init_neptune_model_version(
-                    params=PARAMS, project=PROJECT, model_name=MODEL_NAME)
-                model = ch.create_model(PARAMS)
+                    params=self.PARAMS, project=self.PROJECT, model_name=self.MODEL_NAME)
+                model = ch.create_model(self.PARAMS)
                 MODEL_ID = model_version["sys/id"].fetch()
-                if PARAMS['pretrain']:
+                if self.PARAMS['pretrain']:
                     # MAC: must provide absolute path
                     TRAIN_PATH = sys.path[-1] + '/data/csv/scaled/'
                     train_csv_list = [
-                        f'{TRAIN_PATH}{CSV}.csv' for CSV in PARAMS['pretrain_data']]
+                        f'{TRAIN_PATH}{CSV}.csv' for CSV in self.PARAMS['pretrain_data']]
                     train_X, train_y = train.split_X_y_list(train_csv_list)
                     print(f"Pretraining on {train_X.shape[0]} samples.")
                     neptune_cbk = hn.get_neptune_cbk(run=run)
                     train.train(model=model, train_X=train_X, train_y=train_y,
-                                params=PARAMS, neptune_cbk=neptune_cbk)
+                                params=self.PARAMS, neptune_cbk=neptune_cbk)
                 train.save_trained_model(model_version=model_version, model=model)
 
-        if PARAMS['starting_graph'] == "RANDOM":
+        if self.PARAMS['starting_graph'] == "RANDOM":
             def generate_starting_graph():
-                return ig.Graph.GRG(N, N/2/(N-1))
-        elif PARAMS['starting_graph'] == "EMPTY":
+                return ig.Graph.GRG(self.N, self.N/2/(self.N-1))
+        elif self.PARAMS['starting_graph'] == "EMPTY":
             def generate_starting_graph():
-                return ig.Graph(n=N)
-        elif PARAMS['starting_graph'] == "FROM_PRIOR":
-            prior_counters = nx.read_graph6(PARAMS['starting_graph_path'])
+                return ig.Graph(n=self.N)
+        elif self.PARAMS['starting_graph'] == "FROM_PRIOR":
+            prior_counters = nx.read_graph6(self.PARAMS['starting_graph_path'])
             prior_counters = [prior_counters] if type(
                 prior_counters) != list else prior_counters
             prior_counter = ig.Graph.from_networkx(
-                prior_counters[PARAMS['starting_graph_index']])
+                prior_counters[self.PARAMS['starting_graph_index']])
             prior_counter.add_vertex()
             random.seed(42)
 
             # TODO add missing nodes
-            while (prior_counter.vcount() < N):
+            while (prior_counter.vcount() < self.N):
                 prior_counter.add_vertex()
             
             # TODO remove?
-            for vertex_index in range(N-1):
+            for vertex_index in range(self.N-1):
                 if random.random() <= 0.5:
-                    prior_counter.add_edge(N-1, vertex_index)
+                    prior_counter.add_edge(self.N-1, vertex_index)
 
             def generate_starting_graph():
                 return prior_counter
-        elif PARAMS['starting_graph'] == "FROM_CURRENT":
-            prior_counters = nx.read_graph6(PARAMS['starting_graph_path'])
+        elif self.PARAMS['starting_graph'] == "FROM_CURRENT":
+            prior_counters = nx.read_graph6(self.PARAMS['starting_graph_path'])
             prior_counters = [prior_counters] if type(
                 prior_counters) != list else prior_counters
             prior_counter = ig.Graph.from_networkx(
-                prior_counters[PARAMS['starting_graph_index']])
+                prior_counters[self.PARAMS['starting_graph_index']])
 
             def generate_starting_graph():
                 return prior_counter
         else:
             raise ValueError("Use a valid starting_graph.")
 
-        if PARAMS['starting_graph'] == "FROM_PRIOR":
-            EDGES = [(N-1, i) for i in range(N-1)]
+        if self.PARAMS['starting_graph'] == "FROM_PRIOR":
+            EDGES = [(self.N-1, i) for i in range(self.N-1)]
         else:
-            EDGES = [(i, j) for i in range(N)
-                    for j in range(i+1, N)]
+            EDGES = [(i, j) for i in range(self.N)
+                    for j in range(i+1, self.N)]
 
-        if PARAMS['heuristic_type'] == "RANDOM":
+        if self.PARAMS['heuristic_type'] == "RANDOM":
             def heuristic(vectorizations):
                 return [random.random() for vec in vectorizations]
-        elif PARAMS['heuristic_type'] == "4PATH":
+        elif self.PARAMS['heuristic_type'] == "4PATH":
             def heuristic(vectorizations):
                 return [vec["P_4"] for vec in vectorizations]
-        elif PARAMS['heuristic_type'] == "DNN":
+        elif self.PARAMS['heuristic_type'] == "DNN":
             def heuristic(vectorizations):
                 X = np.array([list(vec.values())[:-1] for vec in vectorizations])
                 predictions = model.predict(X, verbose=0)
                 return [prediction[0] for prediction in predictions]
-        elif PARAMS['heuristic_type'] == "SCALED_DNN":
-            scaler = float(math.comb(N, 4))
+        elif self.PARAMS['heuristic_type'] == "SCALED_DNN":
+            scaler = float(math.comb(self.N, 4))
 
             def heuristic(vectorizations):
                 X = np.array([list(vec.values())[:-1]
@@ -165,7 +165,7 @@ class NeptuneRunner:
                 nx.write_graph6(nx_graph, 'G.g6', header=False)
                 run['running/G'].upload('G.g6')
 
-        if PARAMS['heuristic_type'] in ["RANDOM", "4PATH"]:
+        if self.PARAMS['heuristic_type'] in ["RANDOM", "4PATH"]:
             def update_model(training_data, past, g):
                 save_past_and_g(past, g)
             PAST = dict()
@@ -173,7 +173,7 @@ class NeptuneRunner:
             G = generate_starting_graph()
             oldIterations = 0
             timeOffset = 0
-        elif PARAMS['heuristic_type'] in ["SCALED_DNN", "DNN"]:
+        elif self.PARAMS['heuristic_type'] in ["SCALED_DNN", "DNN"]:
             neptune_cbk = hn.get_neptune_cbk(run)
 
             def load_data():
@@ -194,7 +194,7 @@ class NeptuneRunner:
                 oldIterations = run['running/iterations'].fetch_last()
                 timeOffset = run['running/time'].fetch_last()
                 return past, counters, g, oldIterations, timeOffset
-            if LOAD_MODEL:
+            if self.LOAD_MODEL:
                 PAST, COUNTERS, G, oldIterations, timeOffset = load_data()
             else:
                 PAST = dict()
@@ -211,17 +211,17 @@ class NeptuneRunner:
                     return
                 X = np.array([list(vec.values())[:-1] for vec in training_data])
                 y = np.array([list(vec.values())[-1] for vec in training_data])
-                model.fit(X, y, epochs=PARAMS['epochs'], batch_size=PARAMS['batch_size'], callbacks=[
+                model.fit(X, y, epochs=self.PARAMS['epochs'], batch_size=self.PARAMS['batch_size'], callbacks=[
                         neptune_cbk], verbose=1)
                 train.save_trained_model(model_version, model)
                 save_past_and_g(past, g)
 
-        run['running/N'] = N
-        run['running/S'] = S
-        run['running/T'] = T
+        run['running/N'] = self.N
+        run['running/S'] = self.S
+        run['running/T'] = self.T
         # Mac: Absolute path
         counter_path = sys.path[-1] + f'/data/found_counters/scaled_dnn'
-        unique_path = f'/{counter_path}/r{S}_{T}_{N}_isograph.g6'
+        unique_path = f'/{counter_path}/r{self.S}_{self.T}_{self.N}_isograph.g6'
         if os.path.exists(unique_path):
             os.remove(unique_path)
         PARALLEL = False
@@ -237,8 +237,8 @@ class NeptuneRunner:
                 run['running/iterations'].append(iterations)
             return update_running
         update_running = update_run_data(unique_path, startTime)
-        ramsey_checker.bfs(g=G, unique_path=unique_path, past=PAST, counters=COUNTERS, s=S, t=T, n=N,
-            iter_batch=PARAMS['iter_batch'], update_model=update_model, heuristic=heuristic, update_running=update_running, oldIterations=oldIterations, batches=PARAMS['iter_batches'], edges=EDGES)
+        ramsey_checker.bfs(g=G, unique_path=unique_path, past=PAST, counters=COUNTERS, s=self.S, t=self.T, n=self.N,
+            iter_batch=self.PARAMS['iter_batch'], update_model=update_model, heuristic=heuristic, update_running=update_running, oldIterations=oldIterations, batches=self.PARAMS['iter_batches'], edges=EDGES)
         print(
             f"Single Threaded Time Elapsed: {timeit.default_timer() - startTime}")
         # startTime = timeit.default_timer()
@@ -246,7 +246,7 @@ class NeptuneRunner:
         # bfs(G2, g6path_to_write_to, gEdgePath_to_write_to, PAST_path, s, t, True)
         # print(f"Multi Threaded Time Elapsed: {timeit.default_timer() - startTime}")
         run.stop()
-        if PARAMS['heuristic_type'] in ["SCALED_DNN", "DNN"]:
+        if self.PARAMS['heuristic_type'] in ["SCALED_DNN", "DNN"]:
             model_version.stop()
 
 
