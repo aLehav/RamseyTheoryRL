@@ -47,7 +47,7 @@ class NeptuneRunner:
                                     }
             PARAMS.update(STARTING_GRPAPH_PARAMS)
         return PARAMS
-    def __init__(self, n, s, t, project = f"{os.enself.viron.get('NEPTUNE_NAME')}/RamseyRL", model_name = 'RAM-HEUR', load_model=False, params=get_default_params()):
+    def __init__(self, n, s, t, project = f"{os.environ.get('NEPTUNE_NAME')}/RamseyRL", model_name = 'RAM-HEUR', load_model=False, params=get_default_params()):
         self.N = n
         self.S = s
         self.T = t
