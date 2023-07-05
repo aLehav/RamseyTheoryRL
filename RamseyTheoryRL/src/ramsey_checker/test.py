@@ -115,7 +115,7 @@ class NeptuneRunner:
             def generate_starting_graph():
                 return prior_counter
         elif self.PARAMS['starting_graph'] == "FROM_CURRENT":
-            prior_counters = nx.read_graph6(self.PARAMS['starting_graph_path'])
+            prior_counters = nx.read_graph6(sys.path[-1] + self.PARAMS['starting_graph_path'])
             prior_counters = [prior_counters] if type(
                 prior_counters) != list else prior_counters
             prior_counter = ig.Graph.from_networkx(
