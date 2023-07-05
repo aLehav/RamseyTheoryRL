@@ -42,10 +42,10 @@ class NeptuneRunner:
                             'ramsey_3_6', 'ramsey_3_7', 'ramsey_3_9']
                 PARAMS.update({'pretrain_data': CSV_LIST})
         if PARAMS['starting_graph'] in ["FROM_PRIOR", "FROM_CURRENT"]:
-            STARTING_GRPAPH_PARAMS = {'starting_graph_path': sys.path[-1] + '/data/found_counters/r3_5_12_isograph.g6', # Mac: Absolute path
+            STARTING_GRAPH_PARAMS = {'starting_graph_path': sys.path[-1] + '/data/found_counters/r3_5_12_isograph.g6', # Mac: Absolute path
                                     'starting_graph_index': 0  # 0 is default
                                     }
-            PARAMS.update(STARTING_GRPAPH_PARAMS)
+            PARAMS.update(STARTING_GRAPH_PARAMS)
         return PARAMS
     def update_params(self, params):
         self.PARAMS = params
@@ -105,11 +105,9 @@ class NeptuneRunner:
             prior_counter.add_vertex()
             random.seed(42)
 
-            # TODO add missing nodes
             while (prior_counter.vcount() < self.N):
                 prior_counter.add_vertex()
             
-            # TODO remove?
             for vertex_index in range(self.N-1):
                 if random.random() <= 0.5:
                     prior_counter.add_edge(self.N-1, vertex_index)
