@@ -42,7 +42,7 @@ class NeptuneRunner:
                             'ramsey_3_6', 'ramsey_3_7', 'ramsey_3_9']
                 PARAMS.update({'pretrain_data': CSV_LIST})
         if PARAMS['starting_graph'] in ["FROM_PRIOR", "FROM_CURRENT"]:
-            STARTING_GRAPH_PARAMS = {'starting_graph_path': sys.path[-1] + '/data/found_counters/r3_5_12_isograph.g6', # Mac: Absolute path
+            STARTING_GRAPH_PARAMS = {'starting_graph_path': '/data/found_counters/r3_5_12_isograph.g6', # Mac: Absolute path
                                     'starting_graph_index': 0  # 0 is default
                                     }
             PARAMS.update(STARTING_GRAPH_PARAMS)
@@ -97,7 +97,7 @@ class NeptuneRunner:
             def generate_starting_graph():
                 return ig.Graph(n=self.N)
         elif self.PARAMS['starting_graph'] == "FROM_PRIOR":
-            prior_counters = nx.read_graph6(self.PARAMS['starting_graph_path'])
+            prior_counters = nx.read_graph6(sys.path[-1] + self.PARAMS['starting_graph_path'])
             prior_counters = [prior_counters] if type(
                 prior_counters) != list else prior_counters
             prior_counter = ig.Graph.from_networkx(
