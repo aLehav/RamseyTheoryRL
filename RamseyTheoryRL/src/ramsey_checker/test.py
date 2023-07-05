@@ -1,4 +1,3 @@
-import multiprocessing
 import igraph as ig
 import numpy as np
 import tensorflow as tf
@@ -254,5 +253,7 @@ class NeptuneRunner:
 
 
 if __name__ == '__main__':
+    extractor = parallelTestModule.ParallelExtractor()
+    extractor.runInParallel(numProcesses=2, numThreads=4)
     runner = NeptuneRunner()
     runner.run()

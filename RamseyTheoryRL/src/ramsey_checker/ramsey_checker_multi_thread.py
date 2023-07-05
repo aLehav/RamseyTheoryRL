@@ -183,7 +183,9 @@ class RamseyCheckerMultiThread(RamseyChecker):
         process_edge_wrapper = partial(self.process_edge, g=g, past=past, subgraph_counts=subgraph_counts,
                                        s=s, t=t,  unique_path=unique_path, training_data=training_data, counters=counters, past_state=past_state)
 
-        with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
+        cpu_count = multiprocessing.cpu_count()
+        cpu_count = max(cpu_count-1,1)
+        with multiprocessing.Pool(processes=cpu_count) as pool:
             new_graphs = pool.map(process_edge_wrapper, edges)
 
         new_graphs = [x for x in new_graphs if x is not None]
