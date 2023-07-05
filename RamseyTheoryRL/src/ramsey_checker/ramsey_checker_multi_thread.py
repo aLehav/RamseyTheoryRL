@@ -120,7 +120,7 @@ class RamseyCheckerMultiThread(RamseyChecker):
                 if self.has_independent_set_of_size_k_from_edge(G, t, e):
                     return False
             else:
-                if self.has_independent_set_of_size_k(G, t):
+                if self.has_independent_set_of_size_k(G, t, e):
                     return False
 
         return True
