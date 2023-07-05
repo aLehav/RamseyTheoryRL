@@ -47,10 +47,13 @@ class NeptuneRunner:
                                     }
             PARAMS.update(STARTING_GRPAPH_PARAMS)
         return PARAMS
-    def __init__(self, n, s, t, project = f"{os.environ.get('NEPTUNE_NAME')}/RamseyRL", model_name = 'RAM-HEUR', load_model=False, params=get_default_params()):
+    def update_params(self, params):
+        self.PARAMS = params
+    def __init__(self, n, s, t, multi=False, project = f"{os.environ.get('NEPTUNE_NAME')}/RamseyRL", model_name = 'RAM-HEUR', load_model=False, params=get_default_params()):
         self.N = n
         self.S = s
         self.T = t
+        self.multi = multi
         self.PROJECT = project
         self.MODEL_NAME = model_name
         self.LOAD_MODEL = load_model
@@ -237,14 +240,16 @@ class NeptuneRunner:
                 run['running/iterations'].append(iterations)
             return update_running
         update_running = update_run_data(unique_path, startTime)
-        ramsey_checker.bfs(g=G, unique_path=unique_path, past=PAST, counters=COUNTERS, s=self.S, t=self.T, n=self.N,
-            iter_batch=self.PARAMS['iter_batch'], update_model=update_model, heuristic=heuristic, update_running=update_running, oldIterations=oldIterations, batches=self.PARAMS['iter_batches'], edges=EDGES)
-        print(
-            f"Single Threaded Time Elapsed: {timeit.default_timer() - startTime}")
-        # startTime = timeit.default_timer()
-        # G2 = ig.Graph(7)
-        # bfs(G2, g6path_to_write_to, gEdgePath_to_write_to, PAST_path, s, t, True)
-        # print(f"Multi Threaded Time Elapsed: {timeit.default_timer() - startTime}")
+        if (self.multi):
+            ramsey_multi.bfs(g=G, unique_path=unique_path, past=PAST, counters=COUNTERS, s=self.S, t=self.T, n=self.N,
+                               iter_batch=self.PARAMS['iter_batch'], update_model=update_model, heuristic=heuristic, update_running=update_running, oldIterations=oldIterations, batches=self.PARAMS['iter_batches'], edges=EDGES)
+            print(
+                f"Multi Threaded Time Elapsed: {timeit.default_timer() - startTime}")
+        else:
+            ramsey_checker.bfs(g=G, unique_path=unique_path, past=PAST, counters=COUNTERS, s=self.S, t=self.T, n=self.N,
+                iter_batch=self.PARAMS['iter_batch'], update_model=update_model, heuristic=heuristic, update_running=update_running, oldIterations=oldIterations, batches=self.PARAMS['iter_batches'], edges=EDGES)
+            print(
+                f"Single Threaded Time Elapsed: {timeit.default_timer() - startTime}")
         run.stop()
         if self.PARAMS['heuristic_type'] in ["SCALED_DNN", "DNN"]:
             model_version.stop()
