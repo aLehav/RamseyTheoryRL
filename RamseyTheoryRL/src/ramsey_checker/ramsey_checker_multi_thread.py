@@ -37,6 +37,13 @@ class RamseyCheckerMultiThread(RamseyChecker):
                 return True
         return False
 
+    def has_independent_set_of_size_k_start(self, G, k):
+        for sub_nodes in itertools.combinations(range(G.vcount()), k):
+            subgraph = G.subgraph(sub_nodes)
+            if subgraph.ecount() == 0:
+                return True
+        return False
+
     def check_counterexample(self, G, s, t, subgraph_counts):
         if s == 3:
             if subgraph_counts["K_4"] + subgraph_counts["K_4-e"] + subgraph_counts["K_3+e"] + subgraph_counts["K_3"] > 0:
@@ -68,7 +75,7 @@ class RamseyCheckerMultiThread(RamseyChecker):
         else:
             # Check table and inequality
 
-            if self.has_independent_set_of_size_k(G, t):
+            if self.has_independent_set_of_size_k_start(G, t):
                 return False
 
         return True
