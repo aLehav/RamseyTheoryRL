@@ -13,7 +13,71 @@ Our algorithm has a runtime of O($n^2 * n^{\min({4,s,t})}$) per step. As such, v
 - Sign up with [Neptune AI](https://neptune.ai/)
 - Create a project called RamseyRL with a model called RAM-HEUR
 - Get your Neptune API token and name
-- Follow the steps in  `C:\Users\adaml\OneDrive\SC Files\RamseyTheoryRL\RamseyTheoryRL\ColabRunner.ipynb`
+- Run the following
+  
+  ### Installing Packages
+  ```bash
+  pip install RamseyTheoryRL
+  pip install -r https://raw.githubusercontent.com/aLehav/RamseyTheoryRL/main/RamseyTheoryRL/requirements.txt --quiet
+  ```
+  ### Setting Environment Variables
+  ```python
+  import os
+  # Change these for your real token and username
+  os.environ['NEPTUNE_API_TOKEN'] = 's0me!l0nGn3pTunEt0k3N='
+  os.environ['NEPTUNE_NAME'] = 'yourname'
+  ```
+  ### Setting Parameters and Path
+  ```python
+  from RamseyTheoryRL.src.ramsey_checker.test import NeptuneRunner
+  import tensorflow as tf
+
+  def setup(runner):
+      PARAMS = {'heuristic_type': "SCALED_DNN",  # Choose from RANDOM, 4PATH, DNN, SCALED_DNN
+                'iter_batch': 20,  # Steps to take before updating model data / weights
+                'iter_batches': 50,  # None if no stopping value, else num. of iter_batches
+                'starting_graph': "FROM_PRIOR"}  # Choose from RANDOM, FROM_PRIOR, FROM_CURRENT, EMPTY
+      if PARAMS['heuristic_type'] in ["DNN", "SCALED_DNN"]:
+          DNN_PARAMS = {'training_epochs': 5, 'epochs': 1, 'batch_size': 32, 'optimizer': 'adam', 'loss': tf.keras.losses.BinaryCrossentropy(
+              from_logits=False, label_smoothing=0.2), 'loss_info': 'BinaryCrossentropy(from_logits=False, label_smoothing=0.2)', 'last_activation': 'sigmoid', 'pretrain': True}
+          PARAMS.update(DNN_PARAMS)
+          if PARAMS['pretrain']:
+              CSV_LIST = ['all_leq6', 'ramsey_3_4', 'ramsey_3_5',
+                          'ramsey_3_6', 'ramsey_3_7', 'ramsey_3_9']
+              PARAMS.update({'pretrain_data': CSV_LIST})
+      if PARAMS['starting_graph'] in ["FROM_PRIOR", "FROM_CURRENT"]:
+          STARTING_GRAPH_PARAMS = {'starting_graph_path': '/data/found_counters/r4_6_35_isograph.g6',  # Mac: Absolute path
+                                      'starting_graph_index': 1  # 0 is default
+                                      }
+          PARAMS.update(STARTING_GRAPH_PARAMS)
+      runner.update_params(PARAMS)
+
+  def project_fetcher():
+      return f"{os.environ.get('NEPTUNE_NAME')}/RamseyRL"
+
+  runner = NeptuneRunner(n=36, s=4, t=6, project=project_fetcher())
+  setup(runner)
+  ```
+  ### Running
+  ```python
+  runner.run()
+  ```
+  ### (Optional) Running for all Prior Graphs
+  ```python
+  # Getting max index of starting graph
+  # Only to be used when PARAMS['starting_graph] in ["FROM_PRIOR", "FROM_CURRENT"]
+  import sys
+  import networkx as nx
+
+  def get_max_starting_index(runner):
+    counters = nx.read_graph6(sys.path[-1] + runner.PARAMS['starting_graph_path'])
+    counters = [counters] if type(counters) != list else counters
+    return len(counters)
+
+  for i in range(get_max_starting_index(runner)):
+    runner.PARAMS['starting_graph_index'] = i
+    runner.run()
+  ```
 
 ## Future Changes
 
