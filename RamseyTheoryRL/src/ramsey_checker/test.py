@@ -31,7 +31,8 @@ class NeptuneRunner:
         PARAMS = {'heuristic_type': "SCALED_DNN",  # Choose from RANDOM, 4PATH, DNN, SCALED_DNN
           'iter_batch': 1,  # Steps to take before updating model data / weights
           'iter_batches': 1000,  # None if no stopping value, else num. of iter_batches
-          'starting_graph': "FROM_CURRENT"}  # Choose from RANDOM, FROM_PRIOR, FROM_CURRENT, EMPTY
+          'starting_graph': "FROM_CURRENT", # Choose from RANDOM, FROM_PRIOR, FROM_CURRENT, EMPTY
+          'starting_edges': True}  
         if PARAMS['heuristic_type'] in ["DNN", "SCALED_DNN"]:
             DNN_PARAMS = {'training_epochs': 5, 'epochs': 1, 'batch_size': 32, 'optimizer': 'adam', 'loss': tf.keras.losses.BinaryCrossentropy(
                 from_logits=False, label_smoothing=0.2), 'loss_info': 'BinaryCrossentropy(from_logits=False, label_smoothing=0.2)', 'last_activation': 'sigmoid', 'pretrain': True}
@@ -107,9 +108,10 @@ class NeptuneRunner:
             while (prior_counter.vcount() < self.N):
                 prior_counter.add_vertex()
             
-            for vertex_index in range(self.N-1):
-                if random.random() <= 0.5:
-                    prior_counter.add_edge(self.N-1, vertex_index)
+            if self.PARAMS['starting_edges']:
+                for vertex_index in range(self.N-1):
+                    if random.random() <= 0.5:
+                        prior_counter.add_edge(self.N-1, vertex_index)
 
             def generate_starting_graph():
                 return prior_counter
@@ -253,7 +255,5 @@ class NeptuneRunner:
 
 
 if __name__ == '__main__':
-    extractor = parallelTestModule.ParallelExtractor()
-    extractor.runInParallel(numProcesses=2, numThreads=4)
     runner = NeptuneRunner()
     runner.run()

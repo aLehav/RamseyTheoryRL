@@ -5,6 +5,7 @@ import sys
 import tqdm
 from functools import partial
 import multiprocessing
+import json
 
 
 class RamseyCheckerMultiThread(RamseyChecker):
@@ -99,7 +100,7 @@ class RamseyCheckerMultiThread(RamseyChecker):
             first_bound = (40*n - 91*(t-1))/6
             # e(3,k+1,n) >= 6n-13k
             second_bound = 6*n - 13*(t-1)
-            best_bound = min(first_bound,second_bound)
+            best_bound = min(first_bound, second_bound)
             if (edge_count < best_bound):
                 return False
         elif s == 4:
@@ -151,8 +152,15 @@ class RamseyCheckerMultiThread(RamseyChecker):
         nodes = set(range(G.vcount())) - {u, v}
         for node1, node2 in itertools.combinations(nodes, 2):
             subgraph = G.subgraph([u, v, node1, node2])
-            if to_change:
-                self.change_edge(subgraph, (0, 1))
+            # if to_change:
+            #     x = subgraph.are_connected(0, 1)
+            #     if (subgraph.are_connected(0,1)):
+            #         subgraph.delete_edges((0,1))
+            #     else:
+            #         subgraph.add_edge(0,1)
+            #     # self.change_edge(subgraph, (0, 1))
+            #     y = subgraph.are_connected(0,1)
+            #     print(x == y)
             for name, structure in self.structures.items():
                 if subgraph.isomorphic(structure):
                     counters[name] += 1
@@ -161,18 +169,21 @@ class RamseyCheckerMultiThread(RamseyChecker):
     def update_feature_from_edge(self, G, u, v, counters):
         old_count = self.count_subgraphs_from_edge(G, u, v, False)
         # Change edge
-        new_count = self.count_subgraphs_from_edge(G, u, v, True)
-        # Make and edit a copy of counters such that we can pass it to all children
+        self.change_edge(G, (u, v))
+        new_count = self.count_subgraphs_from_edge(G, u, v, False)
+        # # Make and edit a copy of counters such that we can pass it to all children
         new_counters = {}
         for name in counters:
             new_counters[name] = counters[name] + \
                 (new_count[name] - old_count[name])
+        self.change_edge(G, (u, v))
         return new_counters
 
     def process_edge(self, e, g, past, subgraph_counts, s, t, unique_path, training_data, counters, past_state):
         new_subgraph_counts = self.update_feature_from_edge(
             g, e[0], e[1], subgraph_counts)
-        is_counterexample = self.check_counterexample_from_edge(g, s, t, new_subgraph_counts, e, past_state)
+        is_counterexample = self.check_counterexample_from_edge(
+            g, s, t, new_subgraph_counts, e, past_state)
         vectorization = {**new_subgraph_counts, 'n': g.vcount(),
                          's': s, 't': t, 'counter': is_counterexample}
 
@@ -185,20 +196,22 @@ class RamseyCheckerMultiThread(RamseyChecker):
         # Assume keys in PAST are strings
         if str(vectorization) not in past.keys():
             return (e, new_subgraph_counts, vectorization)
+        else:
+            return None
 
     def step_par(self, g, past, edges, s, t, unique_path, subgraph_counts, training_data, counters, heuristic, past_state):
         process_edge_wrapper = partial(self.process_edge, g=g, past=past, subgraph_counts=subgraph_counts,
                                        s=s, t=t,  unique_path=unique_path, training_data=training_data, counters=counters, past_state=past_state)
 
         cpu_count = multiprocessing.cpu_count()
-        cpu_count = max(cpu_count-1,1)
+        cpu_count = max(cpu_count-1, 1)
         with multiprocessing.Pool(processes=cpu_count) as pool:
             new_graphs = pool.map(process_edge_wrapper, edges)
 
         new_graphs = [x for x in new_graphs if x is not None]
 
         if not new_graphs:
-            return None
+            return None, None
 
         heuristic_values = heuristic(
             [vectorization for (_, _, vectorization) in new_graphs])
@@ -208,21 +221,34 @@ class RamseyCheckerMultiThread(RamseyChecker):
         self.change_edge(g, best[0])
         subgraph_counts.update(best[1])
         past[str(best[2])] = heuristic_values[max_index]
-        return g
+        new_state = best[2]['counter']
+        return g, new_state
+
+    def hash_graph(self, graph):
+        # Create a sorted list of sorted adjacency lists
+        adjacency_list = [sorted(neighbors)
+                          for neighbors in graph.get_adjlist()]
+        sorted_adjacency_list = sorted(adjacency_list)
+
+        # Create a string representation and hash it
+        adjacency_str = json.dumps(sorted_adjacency_list)
+        return hash(adjacency_str)
 
     def bfs(self, g, unique_path, past, counters, s, t, n, iter_batch, update_model, heuristic, update_running, edges, oldIterations=0, batches=None):
         # Will store a list of vectors either expanded or found to be counterexamples, and upate a model after a given set of iterations
         training_data = []
         subgraph_counts = self.count_subgraph_structures(g)
+        # past_hashes = []
         iterations = oldIterations
         state = self.check_counterexample(
             G=g, s=s, t=t, subgraph_counts=subgraph_counts)
         progress_bar = tqdm.tqdm(
             initial=iterations, total=iterations+iter_batch, leave=False)
         while g is not None:
-            g = self.step_par(g, past, edges, s, t,
-                              unique_path, subgraph_counts, training_data, counters, heuristic, state)
-
+            g, state = self.step_par(g, past, edges, s, t,
+                                     unique_path, subgraph_counts, training_data, counters, heuristic, state)
+            # if (g is not None):
+            # past_hashes.append(self.hash_graph(g))
             iterations += 1
             progress_bar.update(1)
             progress_bar.set_postfix(
@@ -239,6 +265,9 @@ class RamseyCheckerMultiThread(RamseyChecker):
         update_model(training_data, past, g)
         update_running(iterations, len(counters))
         progress_bar.close()
+        # print("PAST_HASHES--------------------------------------")
+        # print(past_hashes)
+        # print("-----------------------------------")
         print("Total Iterations", iterations)
 
         return iterations
