@@ -210,7 +210,14 @@ class NeptuneRunner:
                 PAST, COUNTERS, G, oldIterations, timeOffset = load_data()
             else:
                 PAST = dict()
+                prior_counters = nx.read_graph6(
+                    sys.path[-1] + self.PARAMS['starting_graph_path'])
+                prior_counters = [prior_counters] if type(
+                    prior_counters) != list else prior_counters
                 COUNTERS = []
+                if (self.PARAMS['starting_graph'] == "FROM_CURRENT"):    
+                    for counter in prior_counters:
+                        COUNTERS.append(ig.Graph.from_networkx(counter))
                 G = generate_starting_graph()
                 oldIterations = 0
                 timeOffset = 0
