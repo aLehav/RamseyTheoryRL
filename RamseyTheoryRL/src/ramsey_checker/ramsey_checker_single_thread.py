@@ -137,7 +137,7 @@ class RamseyCheckerSingleThread(RamseyChecker):
                 (new_count[name] - old_count[name])
         return new_counters
 
-    def step(self, g, past, edges, s, t, unique_path, subgraph_counts, past_state, training_data: list, counters: list, heuristic):
+    def step(self, g, past, edges, s, t, unique_path, subgraph_counts, past_state, training_data: list, counters: list, heuristic, past_reward_val, alpha):
         new_graphs = []
         vectorizations = []
 
@@ -146,8 +146,11 @@ class RamseyCheckerSingleThread(RamseyChecker):
                 g, e[0], e[1], subgraph_counts)
             is_counterexample = self.check_counterexample_from_edge(
                 g, s, t, subgraph_counts=new_subgraph_counts, e=e, past_state=past_state)
+            # vectorization = {**new_subgraph_counts, 'n': g.vcount(),
+            #                 's': s, 't': t, 'counter': is_counterexample}
+            counter_val = 1 if is_counterexample else past_reward_val * alpha 
             vectorization = {**new_subgraph_counts, 'n': g.vcount(),
-                            's': s, 't': t, 'counter': is_counterexample}
+                            's': s, 't': t, 'counter': counter_val}            
             vectorizations.append(vectorization)
 
             if (is_counterexample):
@@ -162,7 +165,7 @@ class RamseyCheckerSingleThread(RamseyChecker):
         training_data.extend(vectorizations)
 
         if not new_graphs:
-            return None, None
+            return None, None, None
 
         heuristic_values = heuristic(
             [vectorization for (_, _, vectorization) in new_graphs])
@@ -173,10 +176,11 @@ class RamseyCheckerSingleThread(RamseyChecker):
         subgraph_counts.update(best[1])
         past[str(best[2])] = heuristic_values[max_index]
         new_state = best[2]['counter']
+        new_reward_val = 1 if new_state else past_reward_val * alpha
 
-        return g, new_state
+        return g, new_state, new_reward_val
 
-    def bfs(self, g, unique_path, past, counters, s, t, n, iter_batch, update_model, heuristic, update_running, edges, oldIterations=0, batches=None):
+    def bfs(self, g, unique_path, past, counters, s, t, n, iter_batch, update_model, heuristic, update_running, edges, alpha, oldIterations=0, batches=None):
         # Will store a list of vectors either expanded or found to be counterexamples, and upate a model after a given set of iterations
         training_data = []
         subgraph_counts = self.count_subgraph_structures(g)
@@ -185,9 +189,10 @@ class RamseyCheckerSingleThread(RamseyChecker):
             initial=iterations, total=iterations+iter_batch, leave=False)
         state = self.check_counterexample(
             G=g, s=s, t=t, subgraph_counts=subgraph_counts)
+        reward_val = 1 if state else 0
         while g is not None:
-            g, state = self.step(g, past, edges, s, t, unique_path,
-                    subgraph_counts, state, training_data, counters, heuristic)
+            g, state, reward_val = self.step(g, past, edges, s, t, unique_path,
+                    subgraph_counts, state, training_data, counters, heuristic, reward_val, alpha)
 
             iterations += 1
             progress_bar.update(1)

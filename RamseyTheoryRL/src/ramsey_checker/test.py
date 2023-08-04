@@ -37,7 +37,8 @@ class NeptuneRunner:
           'starting_graph': "FROM_CURRENT", # Choose from RANDOM, FROM_PRIOR, FROM_CURRENT, EMPTY
           'starting_edges': True, # Add new edges if starting FROM_PRIOR
           'load_model': False, # Whether or not to load a past version of the model
-          'profiler': True # Enable profiler
+          'profiler': True, # Enable profiler
+          'alpha': 0 # Learning rate for Q-learning
           }  
         if PARAMS['heuristic_type'] in ["DNN", "SCALED_DNN"]:
             DNN_PARAMS = {'training_epochs': 5, 'epochs': 1, 'batch_size': 32, 'optimizer': 'adam', 'loss': tf.keras.losses.BinaryCrossentropy(
@@ -210,14 +211,14 @@ class NeptuneRunner:
                 PAST, COUNTERS, G, oldIterations, timeOffset = load_data()
             else:
                 PAST = dict()
-                prior_counters = nx.read_graph6(
-                    sys.path[-1] + self.PARAMS['starting_graph_path'])
-                prior_counters = [prior_counters] if type(
-                    prior_counters) != list else prior_counters
+                # prior_counters = nx.read_graph6(
+                #     sys.path[-1] + self.PARAMS['starting_graph_path'])
+                # prior_counters = [prior_counters] if type(
+                #     prior_counters) != list else prior_counters
                 COUNTERS = []
-                if (self.PARAMS['starting_graph'] == "FROM_CURRENT"):    
-                    for counter in prior_counters:
-                        COUNTERS.append(ig.Graph.from_networkx(counter))
+                # if (self.PARAMS['starting_graph'] == "FROM_CURRENT"):    
+                #     for counter in prior_counters:
+                #         COUNTERS.append(ig.Graph.from_networkx(counter))
                 G = generate_starting_graph()
                 oldIterations = 0
                 timeOffset = 0
@@ -266,7 +267,7 @@ class NeptuneRunner:
                     f"Multi Threaded Time Elapsed: {timeit.default_timer() - startTime}")
             else:
                 ramsey_checker.bfs(g=G, unique_path=unique_path, past=PAST, counters=COUNTERS, s=self.S, t=self.T, n=self.N,
-                    iter_batch=self.PARAMS['iter_batch'], update_model=update_model, heuristic=heuristic, update_running=update_running, oldIterations=oldIterations, batches=self.PARAMS['iter_batches'], edges=EDGES)
+                    iter_batch=self.PARAMS['iter_batch'], update_model=update_model, heuristic=heuristic, update_running=update_running, oldIterations=oldIterations, batches=self.PARAMS['iter_batches'], edges=EDGES, alpha=self.PARAMS['alpha'])
                 print(
                     f"Single Threaded Time Elapsed: {timeit.default_timer() - startTime}")
             profiler.disable()
@@ -282,7 +283,7 @@ class NeptuneRunner:
                     f"Multi Threaded Time Elapsed: {timeit.default_timer() - startTime}")
             else:
                 ramsey_checker.bfs(g=G, unique_path=unique_path, past=PAST, counters=COUNTERS, s=self.S, t=self.T, n=self.N,
-                                   iter_batch=self.PARAMS['iter_batch'], update_model=update_model, heuristic=heuristic, update_running=update_running, oldIterations=oldIterations, batches=self.PARAMS['iter_batches'], edges=EDGES)
+                                   iter_batch=self.PARAMS['iter_batch'], update_model=update_model, heuristic=heuristic, update_running=update_running, oldIterations=oldIterations, batches=self.PARAMS['iter_batches'], edges=EDGES, alpha=self.PARAMS['alpha'])
                 print(
                     f"Single Threaded Time Elapsed: {timeit.default_timer() - startTime}")
         run.stop()

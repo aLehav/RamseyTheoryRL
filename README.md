@@ -32,31 +32,19 @@ Our algorithm has a runtime of O($n^2 * n^{\min({4,s,t})}$) per step. As such, v
   from RamseyTheoryRL.src.ramsey_checker.test import NeptuneRunner
   import tensorflow as tf
 
-  def setup(runner):
-      PARAMS = {'heuristic_type': "SCALED_DNN",  # Choose from RANDOM, 4PATH, DNN, SCALED_DNN
-                'iter_batch': 20,  # Steps to take before updating model data / weights
-                'iter_batches': 50,  # None if no stopping value, else num. of iter_batches
-                'starting_graph': "FROM_PRIOR"}  # Choose from RANDOM, FROM_PRIOR, FROM_CURRENT, EMPTY
-      if PARAMS['heuristic_type'] in ["DNN", "SCALED_DNN"]:
-          DNN_PARAMS = {'training_epochs': 5, 'epochs': 1, 'batch_size': 32, 'optimizer': 'adam', 'loss': tf.keras.losses.BinaryCrossentropy(
-              from_logits=False, label_smoothing=0.2), 'loss_info': 'BinaryCrossentropy(from_logits=False, label_smoothing=0.2)', 'last_activation': 'sigmoid', 'pretrain': True}
-          PARAMS.update(DNN_PARAMS)
-          if PARAMS['pretrain']:
-              CSV_LIST = ['all_leq6', 'ramsey_3_4', 'ramsey_3_5',
-                          'ramsey_3_6', 'ramsey_3_7', 'ramsey_3_9']
-              PARAMS.update({'pretrain_data': CSV_LIST})
-      if PARAMS['starting_graph'] in ["FROM_PRIOR", "FROM_CURRENT"]:
-          STARTING_GRAPH_PARAMS = {'starting_graph_path': '/data/found_counters/r4_6_35_isograph.g6',  # Mac: Absolute path
-                                      'starting_graph_index': 1  # 0 is default
-                                      }
-          PARAMS.update(STARTING_GRAPH_PARAMS)
-      runner.update_params(PARAMS)
-
   def project_fetcher():
       return f"{os.environ.get('NEPTUNE_NAME')}/RamseyRL"
 
   runner = NeptuneRunner(n=36, s=4, t=6, project=project_fetcher())
-  setup(runner)
+  
+  new_params = runner.PARAMS
+  changed_vals = {'iter_batch':20,
+                  'iter_batches':50,
+                  'starting_graph':"FROM_CURRENT",
+                  'starting_graph_path':'/data/found_counters/r4_5_24_isograph.g6'
+                  }
+  new_params.update(changed_vals)
+  runner.update_params(new_params)
   ```
   ### Running
   ```python
@@ -78,6 +66,26 @@ Our algorithm has a runtime of O($n^2 * n^{\min({4,s,t})}$) per step. As such, v
     runner.PARAMS['starting_graph_index'] = i
     runner.run()
   ```
+
+## Full Parameter Description
+
+ - **heurstic_type**: Choose from RANDOM, 4PATH, DNN, SCALED_DNN
+ - **iter_batch**: Steps to take before updating model data / weights
+ - **iter_batches**: None if no stopping value, else num. of iter_batches
+ - **starting_graph**: Choose from RANDOM, FROM_PRIOR, FROM_CURRENT, EMPTY
+ - **starting_graph_path**: Path to starting graph
+ - **starting_graph_index**: Index of starting graph within starting graph index list
+ - **starting_edges**: Add new edges if starting FROM_PRIOR
+ - **load_model**: Whether or not to load a past version of the model
+ - **profiler**: Enable profiler
+ - **model**: If passed, when using SCALED_DNN or DNN heuristic, the default model of a DNN with hidden layers of size 32, 16, and then 1 with optimizer=params['optimizer'], loss=params['loss'], metrics=['accuracy'] can be overridden for any tf model that has already had `model.compile` called
+ - **training_epochs**: If pretraining on data, the number of epochs to train for
+ - **pretrain**: Whether or not pretraining occurs
+ - **pretrain_data**: A list of preprocessed csv's to be trained on
+ - **epochs**: Epochs to update the model for after each iteration of training
+ - **batch_size**: Batch size for training
+ - **loss_info**: Info regarding loss used, improves logging readability
+ - **alpha**: Learning rate for DNN (i.e. if a counter was found k steps ago, a point that isn't a counter in this iteration would have a value of $\alpha^k$)
 
 ## Future Changes
 
