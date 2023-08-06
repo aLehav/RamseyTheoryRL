@@ -38,7 +38,8 @@ class NeptuneRunner:
           'starting_edges': True, # Add new edges if starting FROM_PRIOR
           'load_model': False, # Whether or not to load a past version of the model
           'profiler': True, # Enable profiler
-          'alpha': 0 # Learning rate for Q-learning
+          'alpha': 0, # Learning rate for Q-learning
+          'model': None
           }  
         if PARAMS['heuristic_type'] in ["DNN", "SCALED_DNN"]:
             DNN_PARAMS = {'training_epochs': 5, 'epochs': 1, 'batch_size': 32, 'optimizer': 'adam', 'loss': tf.keras.losses.BinaryCrossentropy(
