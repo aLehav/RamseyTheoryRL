@@ -4,9 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "RamseyTheoryRL"
-version = "0.78"
+version = "0.81"
 authors = [
-  { name="Steve Vott", email="svott03@gmail.com" },
+  { name="Steve Vott", email="svott@usc.edu" },
   { name="Adam Lehavi", email="alehavi@usc.edu" },
 ]
 description = "Ramsey Number Explorer"

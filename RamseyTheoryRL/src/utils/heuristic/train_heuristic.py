@@ -57,8 +57,8 @@ def train(model: keras.Sequential,
 def save_trained_model(model_version: neptune.ModelVersion,
                        model: keras.Sequential):
     # Save the model itself in Neptune model
-    model.save('my_model')
-    model_version["saved_model"].upload_files("my_model")
+    model.save('my_model.h5')
+    model_version["saved_model"].upload_files("my_model.h5")
     for name in glob.glob("variables/*"):
         model_version[name].upload(name)
 
