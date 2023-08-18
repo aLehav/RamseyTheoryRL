@@ -27,21 +27,30 @@ Our algorithm has a runtime of O($n^2 * n^{\min({4,s,t})}$) per step. As such, v
   os.environ['NEPTUNE_API_TOKEN'] = 's0me!l0nGn3pTunEt0k3N='
   os.environ['NEPTUNE_NAME'] = 'yourname'
   ```
-  ### Setting Parameters and Path
+    ### Setting Parameters and Path
   ```python
   from RamseyTheoryRL.src.ramsey_checker.test import NeptuneRunner
   import tensorflow as tf
-
+  
   def project_fetcher():
       return f"{os.environ.get('NEPTUNE_NAME')}/RamseyRL"
 
-  runner = NeptuneRunner(n=36, s=4, t=6, project=project_fetcher())
-  
+  runner = NeptuneRunner(n=8, s=3, t=4, project=project_fetcher())
+
   new_params = runner.PARAMS
   changed_vals = {'iter_batch':20,
                   'iter_batches':50,
                   'starting_graph':"FROM_CURRENT",
-                  'starting_graph_path':'/data/found_counters/r4_5_24_isograph.g6'
+                  'starting_graph_path':'/data/found_counters/r3_4_8_isograph.g6',
+                  'starting_edges': True,
+                  'load_model': False,
+                  'profiler': True,
+                  'alpha': 0,
+                  'model': None,
+                  'training_epochs': 5,
+                  'epochs': 1,
+                  'batch_size': 32,
+                  'optimizer': 'adam',
                   }
   new_params.update(changed_vals)
   runner.update_params(new_params)
