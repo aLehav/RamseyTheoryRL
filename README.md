@@ -20,6 +20,15 @@ Our algorithm has a runtime of O($n^2 * n^{\min({4,s,t})}$) per step. As such, v
   pip install RamseyTheoryRL
   pip install -r https://raw.githubusercontent.com/aLehav/RamseyTheoryRL/main/RamseyTheoryRL/requirements.txt --quiet
   ```
+
+  If there are dependency conflicts, run the following instead:
+    ```bash
+  pip install RamseyTheoryRL
+  pip install numpy==1.23 keras==2.12.0 matplotlib==3.7.1 neptune==1.3.1 \
+  networkx==3.1 pandas==1.5.3 python_igraph==0.10.5 scikit_learn==1.2.2 \
+  seaborn==0.12.2 tensorflow==2.12.0 tqdm==4.65.0 neptune_tensorflow_keras==2.1.1 \
+  --quiet
+    ```
   ### Setting Environment Variables
   ```python
   import os
@@ -58,6 +67,23 @@ Our algorithm has a runtime of O($n^2 * n^{\min({4,s,t})}$) per step. As such, v
   ### Running
   ```python
   runner.run()
+  ```
+  ### (Optional) Adding a Counterexample File
+  Method shown in meant for a Google Colab environment
+  ```python
+  from google.colab import files
+  files.upload()
+  ```
+  File should be taken from [McKay and Exoo's Database](https://users.cecs.anu.edu.au/~bdm/data/ramsey.html)
+  ```python
+  import shutil
+  # Make sure name matches that in 'starting_graph_path'
+  uploaded_filename = "r3_4_8_isograph.g6"
+  destination_path = (
+    "/usr/local/lib/python3.10/dist-packages/"
+    "RamseyTheoryRL/data/found_counters/r3_4_8_isograph.g6"
+  )
+  shutil.move(uploaded_filename, destination_path)
   ```
   ### (Optional) Running for all Prior Graphs
   ```python
